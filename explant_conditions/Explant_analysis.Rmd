@@ -1,0 +1,37 @@
+---
+title: "Explant Culture Analysis"
+author: "Sean Nguyen"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+---
+#Overall Objective 
+
+
+##Load Libraries
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(cowplot)
+library(broom)
+```
+
+##Import data
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+setwd("~/GitHub/Experiments/explant_conditions")
+setwd("~/Library/Mobile\ Documents/com~apple~CloudDocs/time-course/data")
+
+raw_data <- "explant_combined-ExperimentSummary.csv"
+key_data <- "explant_key.csv"
+standard_data <- "standards_combined-ExperimentSummary.csv"
+
+
+data <- read_csv(raw_data)
+standards <- read_csv(standard_data)
+key <- read_csv(key_data)
+
+data
+standards
+key
+```
