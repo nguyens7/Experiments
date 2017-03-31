@@ -2,9 +2,9 @@
 title: "Human CTB BPS Project"
 author: "Sean Nguyen"
 output:
-  pdf_document: default
-  html_notebook: default
   html_document: default
+  html_notebook: default
+  pdf_document: default
 ---
 #Overall Objective 
 
@@ -20,28 +20,28 @@ library(plotly)
 
 ##Import data
 ```{r, message=FALSE, warning=FALSE, include=FALSE}
-setwd("~/GitHub/Experiments/CTB_BPS/")
+setwd("~/GitHub/Experiments/CTB_BPS/data/")
 # setwd("~/Library/Mobile\ Documents/com~apple~CloudDocs/time-course/data")
 
-raw_data <- "CTB_pilot_48hr-ExperimentSummary.csv"
-# key_data <- "explant_key.csv"
-standard_data <- "std_CTB_pilot_48hr-ExperimentSummary.csv"
+raw_data <- "CTB_pilot_48hr_96hr-ExperimentSummary.csv"
+key_data <- "Key_hCTBPetroff_Lopez.csv"
+standard_data <- "std_CTB_pilot_48hr_96hr-ExperimentSummary.csv"
 
 
 data <- read_csv(raw_data)
 standards <- read_csv(standard_data)
-# key <- read_csv(key_data)
+key <- read_csv(key_data)
 
 data
 standards
-# key
+key
 ```
 
 ##Convert data from 'wide' to 'long' format
 ```{r, message=FALSE, warning=FALSE}
 # data
 data1 <- data %>%
-  gather(Sample,Count,2:25)
+  gather(Sample,Count,2:49)
 
 # Separate samples by identifiers 
 data2 <- data1 %>% 
@@ -51,7 +51,7 @@ data2 <- data1 %>%
 
 # Standards
 standards1 <- standards %>% 
-  gather(Sample,Count,2:13)
+  gather(Sample,Count,2:25)
 
 
 standards2 <- standards1 %>% 
@@ -74,11 +74,14 @@ data2$Tech_rep <- as.numeric(data2$Tech_rep)
 data2
 
 # Refactoring COlumns for key
-# key$Sample_ID <- as.factor(key$Sample_ID)
-# key$Animal <- as.factor(key$Animal)
-# key$Condition <- as.factor(key$Condition)
-# 
-# key
+key$Sample_ID <- as.factor(key$Sample_ID)
+key$Time <- as.factor(key$Time)
+key$Treatment <- as.factor(key$Treatment)
+key$Volume <- as.numeric(key$Volume)
+
+key$Treatment <- factor(key$Treatment,levels = c('DMSO','EGF','BPS','BPS_EGF'))
+
+key
 
 # Refactoring columns for standards
 standards2$Sample_ID <- as.factor(standards2$Sample_ID)
@@ -99,7 +102,7 @@ standards2 <- standards2 %>%
   mutate(True_Count=Dilution_factor*Count)
 
 # Set the correct order of 'categorical factors'
-standards2$Nano_day <-  factor(standards2$Nano_day, levels=c('1'))
+standards2$Nano_day <-  factor(standards2$Nano_day, levels=c('1','2'))
 standards2$When <- factor(standards2$When, levels=c('before','after'))
 
 standards2
@@ -132,19 +135,22 @@ standards4
 ###Plot before and after plots, facet by experimental day
 ```{r}
 std_plot <- standards4 %>% 
-  ggplot(aes(x=particle_size,y=inj_mean,color=When))+
+  ggplot(aes(x = particle_size, y = inj_mean, color=When))+
+  geom_line(size=2) + xlim(0,300)+ #line size, x-axis scale
   geom_ribbon(aes(ymin=inj_mean-inj_se, ymax=inj_mean+inj_se),
-              alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
-  geom_line(size=2) + xlim(0,500)+ #line size, x-axis scale
+              alpha=0.4,fill = alpha('grey12', 0.2)) + #error bars
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Particle Size") + # X axis label
   ylab("\nMean Particle Concentration/ml\n") + # Y axis label
   ggtitle("Nanosight Histogram of\n100nm Standards")+ #title
   labs(color="Condition")+ #Label table title
-  facet_grid(. ~ When)
+  facet_wrap(~ Nano_day)
 
 std_plot
 
+
+ggsave("Standards_histogram_plot.png",
+       height = 5, width = 7, dpi = 300, units= "in")
 ```
 
 ### Standards particle concentrations from each experimental day
@@ -158,27 +164,51 @@ standards_df
 
 ###Bar graph of standards particle concentrations
 ```{r}
-standards_df %>% 
+standards_bar <- standards_df %>% 
   ggplot(aes(x=Nano_day,y=total,fill=When))+
   geom_col(position="dodge")+
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Experimental Day") + # X axis label
   ylab("\nMean Particle Concentration/ml\n") + # Y axis label
-  ggtitle("Nanosight Histogram of\nVirgin Mouse Plasma")+ #title
+  ggtitle("Nanosight Histogram of\n100nm Standards")+ #title
   labs(color="When") #Label table title
+
+standards_bar
+
+ggsave("Standards_bar_plot.png",
+       height = 5, width = 7, dpi = 300, units= "in")
 ```
 
 ###Intraassay variability
 ```{r}
 Intra.assay_cv <- standards_df %>% 
   group_by(Nano_day) %>% 
-  summarise(Day_N = length(total),
-             Day_mean = mean(total),
-             Day_sd = sd(total),
-             Day_se = Day_sd/sqrt(Day_N),
-            Day_cv = Day_sd/Day_mean )
+  summarise(Intra_Day_N = length(total),
+            Intra_Day_mean = mean(total),
+            Intra_Day_sd = sd(total),
+            Intra_Day_se = Intra_Day_sd/sqrt(Intra_Day_N),
+            Intra_Day_cv = Intra_Day_sd/Intra_Day_mean )
 Intra.assay_cv
+
+# # Save as .csv
+# write_csv(Intra.assay_cv,"Intra.assay_cv.csv")
 ```
+
+###Interassay variability
+```{r}
+Inter.assay_cv <- Intra.assay_cv %>% 
+  summarise(Inter_Day_N = length(Intra_Day_mean),
+            Inter_Day_mean = mean(Intra_Day_mean),
+            Inter_Day_sd = sd(Intra_Day_mean),
+            Inter_Day_se = Inter_Day_sd/sqrt(Inter_Day_N),
+            Inter_Day_cv = Inter_Day_sd/Inter_Day_mean )
+Inter.assay_cv
+
+# # Save as .csv
+# write_csv(Inter.assay_cv,"Inter.assay_cv.csv")
+```
+
+
 
 #Sample analysis
 
@@ -213,61 +243,26 @@ data4 <- data3 %>%
 data4
 
 # Average technical replicates and merge with key
-# merge <- left_join(key,data3, by= "Sample_ID")
-# 
-# merge
-# 
-# # Average injection replicates and merge with key
-# merge1 <- left_join(key,data4, by= "Sample_ID")
-# 
-# merge1
+merge <- left_join(key,data3, by= "Sample_ID")
+
+merge
+
+#Save as .csv
+write_csv(merge,"Technical_replicate_average.csv")
+ 
+# Average injection replicates and merge with key
+merge1 <- left_join(key,data4, by= "Sample_ID")
+
+merge1
+
+# #Save as .csv
+# write_csv(merge1,"Injection_replicate_average.csv")
+
 ```
 
 
 
 #Quick visualizations
-
-
-
-#TEST DO NOT USE
-```{r}
-plot_of_48 <- data3 %>% 
- ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
-  geom_ribbon(aes(ymin=tech_mean-tech_se,
-                  ymax=tech_mean+tech_se),
-                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
-  geom_line(size=2.0) + xlim(0,500)+ #line size, x-axis scale
-  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
-  xlab("Particle Size") + # X axis label
-  ylab("\nMean Particle Concentration/ml\n") + # Y axis label
-  ggtitle("Nanosight Histogram of\nHuman CTBs Treated with BPS")+ #title
-  labs(color="Injection")+ #Label table title
-  facet_wrap(~Sample_ID)
-  # facet_grid(Animal ~ Condition)+
-  # geom_vline(xintercept = 140)+
-  # annotate("text", x= 235, y = 1E9, label= "140nm")
-
-plot_of_48
-
-ggplotly(plot_of_48)
-
-
-data4 %>%
-  group_by(Sample_ID) %>% 
-  summarise(particle_conc=sum(inj_mean)) %>% 
-  ggplot(aes(x = reorder(Sample_ID,particle_conc), y = particle_conc ))+
-  geom_col()
-
-
-
-
-
-
-
-```
-
-
-
 
 ### Graphing all samples
 ```{r, warning=FALSE}
@@ -276,66 +271,102 @@ sample_plot <- merge %>%
   geom_ribbon(aes(ymin=tech_mean-tech_se,
                   ymax=tech_mean+tech_se),
                   alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
-  geom_line(size=2.0) + xlim(0,500)+ #line size, x-axis scale
+  geom_line(size=2.0, alpha = 0.8) + xlim(0,500)+ #line size, x-axis scale
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Particle Size") + # X axis label
   ylab("\nMean Particle Concentration/ml\n") + # Y axis label
-  ggtitle("Nanosight Histogram of\nVirgin Mouse Plasma")+ #title
+  ggtitle("Nanosight Histogram of\nhCTBS treated with BPS")+ #title
   labs(color="Injection")+ #Label table title
-  facet_grid(Animal ~ Condition)+
-  geom_vline(xintercept = 140)+
-  annotate("text", x= 235, y = 1E9, label= "140nm")
+  facet_grid(Time ~ Treatment)
+  # geom_vline(xintercept = 200)+
+  # annotate("text", x= 350, y = 1E8, label= "200nm")
 
 sample_plot
+
+# ggsave("Nanosight_Sample_Histogram.png", plot = sample_plot,
+#        height = 10, width = 14, dpi = 200, units= "in")
 ```
+###Interactive Plot
+```{r}
+ggplotly(sample_plot)
+```
+
+
 
 ### Particle concentration values for each of the samples
 ```{r}
 merge2 <- merge1 %>% 
-  group_by(Animal,Condition) %>% 
+  group_by(Time, Treatment, Volume) %>% 
   summarise(particle_conc=sum(inj_mean))
 merge2
 ```
 
-
-### Summary statistics of particle concentration (averaging n=6 for each time point)
+### Correct for resuspension volume
 ```{r}
 merge3 <- merge2 %>% 
-  group_by(Condition) %>% 
-  summarise(Condition_N=length(particle_conc),
-            Condition_mean = mean(particle_conc),
-            Condition_sd = sd(particle_conc),
-            Condition_se = Condition_sd/sqrt(Condition_N))
+  mutate(particle_count = (Volume/1000)*particle_conc, # Create new column with number of particles
+         corrected_particle_conc = particle_count/1000) # Create new column with correct particle concentration
 merge3
+
+# # Save as .csv
+# write_csv(merge3,"Adjusted_particle_concentration.csv")
+
 ```
 
-###Boxplot
-```{r, warning=FALSE}
-plot1 <- merge2 %>% 
-  #filter(!Animal== '1371'|!Condition == 'lowOxygen') %>% 
-  group_by(Condition) %>% 
-  ggplot(aes(x= Condition, y = particle_conc, color=Condition)) +
-  geom_boxplot(colour="black",fill=NA) + 
-  geom_point(aes(text = paste("Animal:", Animal)),
-             position='jitter',size=3)+
+
+###Barplot
+```{r, warning=TRUE}
+plot1 <- merge3 %>% 
+  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Treatment)) +
+  geom_bar(aes(text = paste("Particle Concentration:",
+                            corrected_particle_conc)),
+           stat="identity", position = "dodge")+
   xlab("\nTreatment\n") + # X axis label
-  ylab("\nExosomes/ml\n") + # Y axis label
-  ggtitle("GD 17.5 Placental Exosome \nExplant Culture (Ultracentrigution)\n")+ #title
-  labs(color="Condition") # Label table title
+  ylab("\nExtracelluar\nVessicles / ml\n") + # Y axis label
+  ggtitle("Effect of BPS on Extracellular Vessicle\nRelease of hCTBs\n")+
+  scale_y_continuous(expand = c(0,0))+ # set bottom of graph
+  labs(color="Condition")+ # Label table title
+  facet_wrap(~Time)
 
   
 plot1
+
+# ggsave("BPS_treated_hCTBs_48_96_facet_plot.png",
+#        height = 8, width = 10, dpi = 600, units= "in")
 ```
 ##Interactive Plot
 ```{r}
-# ggplotly(plot1)
+ggplotly(plot1)
 ```
+
+###Barplot
+```{r}
+plot2 <- merge3 %>%
+  group_by(Time) %>% 
+  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Time )) +
+  geom_bar(position = "dodge", stat = "identity")+
+  xlab("\nTreatment\n") + # X axis label
+  ylab("\nExtracelluar\nVessicles / ml\n") + # Y axis label
+  ggtitle("Effect of BPS on Extracellular Vessicle\nRelease of hCTBs\n")+ #title
+  scale_y_continuous(expand = c(0,0))+ # set bottom of graph
+  labs(fill= "Time (hr)")
+
+plot2
+
+# ggsave("BPS_treated_hCTBs_48_96_plot.png",
+#        height = 5, width = 7, dpi = 600, units= "in")
+```
+## Interactive Plot
+```{r}
+ggplotly(plot2)
+```
+
 
 
 # Statistics
 
 ```{r}
-fit <- t.test(particle_conc ~ Condition,data=merge2)
+fit <- aov(corrected_particle_conc ~ Time * Treatment ,data=merge3)
 
 tidy(fit)
 ```
