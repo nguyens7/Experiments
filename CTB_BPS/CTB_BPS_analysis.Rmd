@@ -37,9 +37,6 @@ data <- read_csv(raw_data)
 standards <- read_csv(standard_data)
 key <- read_csv(key_data)
 
-data
-standards
-key
 ```
 
 ##Convert data from 'wide' to 'long' format
@@ -76,7 +73,6 @@ data2$Dilution_factor <- as.numeric(data2$Dilution_factor)
 data2$Injection<- as.factor(data2$Injection)
 data2$Tech_rep <- as.numeric(data2$Tech_rep)
 
-data2
 
 # Refactoring COlumns for key
 key$Sample_ID <- as.factor(key$Sample_ID)
@@ -86,7 +82,6 @@ key$Volume <- as.numeric(key$Volume)
 
 key$Treatment <- factor(key$Treatment,levels = c('DMSO','EGF','BPS','BPS_EGF'))
 
-key
 
 # Refactoring columns for standards
 standards2$Sample_ID <- as.factor(standards2$Sample_ID)
@@ -94,8 +89,6 @@ standards2$When <- as.factor(standards2$When)
 standards2$Dilution_factor <- as.numeric(standards2$Dilution_factor)
 standards2$Injection <- as.factor(standards2$Injection)
 standards2$Nano_day <- as.numeric(standards2$Nano_day)
-
-standards2
 
 ```
 
@@ -110,7 +103,6 @@ standards2 <- standards2 %>%
 standards2$Nano_day <-  factor(standards2$Nano_day, levels=c('1','2'))
 standards2$When <- factor(standards2$When, levels=c('before','after'))
 
-standards2
 ```
 
 ###Summarize three technical standard replicates
