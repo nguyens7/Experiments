@@ -140,8 +140,8 @@ std_plot <- standards4 %>%
               alpha=0.4,fill = alpha('grey12', 0.2)) + #error bars
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Particle Size") + # X axis label
-  ylab("\nMean Particle Concentration/ml\n") + # Y axis label
-  ggtitle("Nanosight Histogram of\n100nm Standards")+ #title
+  ylab("\nMean Particle Concentration\n(particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\n100nm Standards\n(Facets Represent Experimental Days)")+ #title
   labs(color="Condition")+ #Label table title
   facet_wrap(~ Nano_day)
 
@@ -168,7 +168,7 @@ standards_bar <- standards_df %>%
   geom_col(position="dodge")+
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Experimental Day") + # X axis label
-  ylab("\nMean Particle Concentration/ml\n") + # Y axis label
+  ylab("\nMean Particle Concentration\n(particles/ml)\n") + # Y axis label
   ggtitle("Nanosight Histogram of\n100nm Standards")+ #title
   labs(color="When") #Label table title
 
@@ -263,9 +263,10 @@ merge1
 
 #Quick visualizations
 
-### Graphing all samples
+### Graphing all samples at 48 hours
 ```{r, warning=FALSE}
-sample_plot <- merge %>%
+sample_plot_48 <- merge %>%
+  filter(Time == "48") %>% 
   ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
   geom_ribbon(aes(ymin=tech_mean-tech_se,
                   ymax=tech_mean+tech_se),
@@ -274,20 +275,40 @@ sample_plot <- merge %>%
   scale_y_continuous(expand=c(0,0))+ #set bottom of graph
   xlab("Particle Size") + # X axis label
   ylab("\nMean Particle Concentration/ml\n") + # Y axis label
-  ggtitle("Nanosight Histogram of\nhCTBS treated with BPS")+ #title
+  ggtitle("Nanosight Histogram of\nhCTBS treated with BPS (48 hours)")+ #title
   labs(color="Injection")+ #Label table title
-  facet_grid(Time ~ Treatment)
-  # geom_vline(xintercept = 200)+
-  # annotate("text", x= 350, y = 1E8, label= "200nm")
+  facet_grid(Patient_ID ~ Treatment)+
+  geom_vline(xintercept = 200)+
+  annotate("text", x= 350, y = 1E8, label= "200nm")
 
-sample_plot
+sample_plot_48
 
-# ggsave("Nanosight_Sample_Histogram.png", plot = sample_plot,
+# ggsave("Nanosight_Sample_Histogram_48hr.png", plot = sample_plot_48,
 #        height = 10, width = 14, dpi = 200, units= "in")
 ```
-###Interactive Plot
+
+### Graphing all samples at 96 hours
 ```{r}
-ggplotly(sample_plot)
+sample_plot_96 <- merge %>%
+  filter(Time == "96") %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=2.0, alpha = 0.8) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration/ml\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nhCTBS treated with BPS (96 hours)")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_grid(Patient_ID ~ Treatment)+
+  geom_vline(xintercept = 200)+
+  annotate("text", x= 350, y = 5E7, label= "200nm")
+
+sample_plot_96
+
+# ggsave("Nanosight_Sample_Histogram_96hr.png", plot = sample_plot_96,
+#        height = 10, width = 14, dpi = 200, units= "in")
 ```
 
 
@@ -316,30 +337,51 @@ merge3
 ###Barplot
 ```{r, warning=TRUE}
 merge3$Patient_ID <- factor(merge3$Patient_ID,levels = c('1','5','7'))
+merge3$Time <- factor(merge3$Time,levels= c('48','96'))
 
 plot1 <- merge3 %>%
-  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Patient_ID)) +
+  group_by(Time,Patient_ID,Treatment) %>% 
+  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Time, group=Time)) +
   geom_bar(aes(text = paste("Particle Concentration:",
                             corrected_particle_conc)),
-           stat="identity", position = "dodge")+
+            position = "dodge", stat= "identity")+
   xlab("\nTreatment\n") + # X axis label
   ylab("\nMean Vessicle Concentration\n(10^9 particles/ ml)\n") + # Y axis label
   ggtitle("Effect of BPS on Extracellular Vessicle\nRelease of hCTBs\n")+
   scale_y_continuous(breaks = seq(0,14,2),
                      limits = c(0,14),
                      expand = c(0,0))+ # set bottom of graph
-  labs(color="Condition")+ # Label table title
-  facet_wrap(~Time)
-
+  labs(fill="Time(hr)")+ # Label table title
+  facet_wrap(~Patient_ID)
+  
   
 plot1
 
-# ggsave("BPS_treated_hCTBs_48_96_facet_plot.png",
+# ggsave("BPS_treated_hCTBs_sample_facet_plot.png",
 #       height = 8, width = 10, dpi = 300, units= "in")
 ```
-##Interactive Plot
+##Double Facet Plot
 ```{r}
-ggplotly(plot1)
+sample_double_facet <- merge3 %>%
+  group_by(Time,Patient_ID,Treatment) %>% 
+  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Time, group=Time)) +
+  geom_bar(aes(text = paste("Particle Concentration:",
+                            corrected_particle_conc)),
+            position = "dodge", stat= "identity")+
+  xlab("\nTreatment\n") + # X axis label
+  ylab("\nMean Vessicle Concentration\n(10^9 particles/ ml)\n") + # Y axis label
+  ggtitle("Effect of BPS on Extracellular Vessicle\nRelease of hCTBs \n")+
+  scale_y_continuous(breaks = seq(0,14,2),
+                     limits = c(0,14),
+                     expand = c(0,0))+ # set bottom of graph
+  labs(fill="Time(hr)")+ # Label table title
+  facet_wrap(Time~Patient_ID)
+
+sample_double_facet
+
+
+# ggsave("BPS_treated_hCTBs_sample_double_facet_plot.png",
+#       height = 8, width = 10, dpi = 300, units= "in")
 ```
 
 ###Boxplot
@@ -358,7 +400,7 @@ plot2 <- merge3 %>%
 plot2
 
  # ggsave("BPS_treated_hCTBs_48_96_plot.png",
- #       height = 5, width = 7, dpi = 500, units= "in")
+ #       height = 10, width = 14, dpi = 500, units= "in")
 ```
 ## Interactive Plot
 ```{r}
@@ -369,12 +411,33 @@ ggplotly(plot2)
 
 
 ```{r}
-merge3 %>% 
+merge4 <- merge3 %>% 
   group_by(Time,Treatment) %>% 
-  summarise(   N = length(particle_conc),
-            mean = mean(particle_conc),
-              sd = sd(particle_conc),
+  summarise(   N = length(corrected_particle_conc),
+            mean = mean(corrected_particle_conc),
+              sd = sd(corrected_particle_conc),
               se = sd/sqrt(N))
+
+merge4
+
+averaged_plot <- merge4 %>% 
+  ggplot(aes(x = Treatment, y = mean, fill = Time )) +
+  geom_bar( position = "dodge", stat= "identity")+
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.5, 
+                size=0.8, colour="black", position=position_dodge(.9)) + #error bars
+  scale_y_continuous(breaks = seq(0,12,3),
+                     limits = c(0,12),
+                     expand=c(0,0))+ #set bottom of graph
+  xlab("\nTreatment\n") + # X axis label
+  ylab("\nMean Vessicle Concentration\n(10^9 particles/ ml)\n") + # Y axis label
+  ggtitle("Effect of BPS on Extracellular Vessicle\nRelease of hCTBs (n = 3)\n")+
+  labs(fill= "Time (hr)")+
+  facet_wrap(~Time)
+
+averaged_plot
+
+# ggsave("Averaged_BPS_treated_hCTBs_48_96_plot.png",
+#       height = 5, width = 7, dpi = 500, units= "in")
 ```
 
 
@@ -405,5 +468,55 @@ tukey
 tukey %>% 
   filter(adj.p.value <0.05) %>% 
   arrange(adj.p.value)
+```
+
+#Filtering on 200nm or less
+```{r}
+nano_data <- data3 %>% 
+  filter(particle_size <200.5) %>% 
+  group_by(particle_size,Sample_ID,Dilution_factor) %>% 
+  summarise( inj_N = length(tech_mean),
+             inj_mean = mean(tech_mean),
+             inj_sd = sd(tech_mean),
+             inj_se = inj_sd/sqrt(inj_N))
+nano_data
+
+# Average technical replicates and merge with key
+merge_nano <- left_join(key,nano_data, by= "Sample_ID")
+
+merge_nano
+
+```
+```{r}
+
+merge_nano2 <- merge_nano %>%  
+  group_by(Time, Treatment, Volume,Patient_ID) %>% 
+  summarise(particle_conc=sum(inj_mean))
+
+merge_nano3 <- merge_nano2 %>% 
+  mutate(particle_count = (Volume/1000)*particle_conc, # Create new column with number of particles
+         corrected_particle_conc = (particle_conc/1E9)) # Create new column with correct particle concentration
+merge_nano3
+
+nano_plot <- merge_nano3 %>% 
+ group_by(Time,Patient_ID,Treatment) %>% 
+  ggplot(aes(x = Treatment, y = corrected_particle_conc, fill = Time, group=Time)) +
+  geom_bar(aes(text = paste("Particle Concentration:",
+                            corrected_particle_conc)),
+            position = "dodge", stat= "identity")+
+  xlab("\nTreatment\n") + # X axis label
+  ylab("\nMean Vessicle Concentration\n(10^9 particles/ ml)\n") + # Y axis label
+  ggtitle("Effect of BPS on Extracellular Vessicle (<200nm)\nRelease of hCTBs \n")+
+  scale_y_continuous(breaks = seq(0,14,2),
+                     limits = c(0,14),
+                     expand = c(0,0))+ # set bottom of graph
+  labs(color="Condition")+ # Label table title
+  facet_wrap(~Patient_ID)
+
+nano_plot
+
+
+
+
 ```
 
