@@ -2,9 +2,12 @@
 title: "Explant Culture Analysis"
 author: "Sean Nguyen"
 output:
+  html_document: 
+    df_print: paged
+    theme: flatly
+  html_notebook:
+    df_print: paged
   pdf_document: default
-  html_notebook: default
-  html_document: default
 ---
 #Overall Objective 
 
@@ -270,7 +273,6 @@ merge3
 ###Boxplot
 ```{r, warning=FALSE}
 plot1 <- merge2 %>% 
-  #filter(!Animal== '1371'|!Condition == 'lowOxygen') %>% 
   group_by(Condition) %>% 
   ggplot(aes(x= Condition, y = particle_conc, color=Condition)) +
   geom_boxplot(colour="black",fill=NA) + 
@@ -283,6 +285,9 @@ plot1 <- merge2 %>%
 
   
 plot1
+
+ggsave(plot = plot1, "UC_Condition_Comparison.png",
+       height = 5, width = 7, dpi = 600, units= "in")
 ```
 ##Interactive Plot
 ```{r}
