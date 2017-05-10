@@ -1,0 +1,565 @@
+---
+title: "Thyroiditis Exosome Analysis"
+author: "Sean Nguyen"
+output:
+  html_document:
+    df_print: paged
+    theme: flatly
+  html_notebook: default
+  pdf_document: default
+---
+#Overall Objective 
+
+Deterine the concentration of total exosomes in differnt thryroid diseased states, Normal, TgAA+, and Hypothyroid. This experiment was controlled for breed and age, while sex was not. From each of the diseased states two good quality serum samples were choosen and exosomes were isolated using the  total exosome isolation reagent (ThermoFisher) and resuspended in 30ul of PBS. Samples were then blinded (randomly assigned numbers) and analzed by Nanosight (NS300 Malvern) nanoparticle tracking analysis. Analysis of all six trial samples were completed in one day with before and after controls of 100nm polystyrene beads (1:125 in PBS) to determine intra and inter assay variability.
+
+
+###Nanosight measurement/ experimental setup
+Samples and standards were measured twice by two separate injections (from separate tubes) into the machine.  Three, thirty second 30 second videos were recorded and analyzed by Nanosight NTA 3.2 and exported raw data was exported as a .csv file which was minimally processed for easy import into R.
+
+
+###Nanosight acquisition settings  
+||Gain|Level|Threshold|  
+|---|---|---|---|
+|Standards|1|11|4|
+|Samples|1|12|4|
+
+##Load Libraries
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(cowplot)
+library(broom)
+library(pwr)
+library(plotly)
+```
+
+##Import data
+
+There are total of three datasets that will be used for this experiment.  The raw data from all the samples, the 100nm standards to determine the inter and intra-assay variation as well as the timecourse data that serves as the 'key' to identify Sample_ID to the experiment condition.  
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+setwd("~/GitHub/Experiments/Thyroiditis/data/")
+#setwd("~/Library/Mobile\ Documents/com~apple~CloudDocs/time-course/data")
+
+rawdata <- "samples_-ExperimentSummary.csv"
+key <- "key.csv"
+standards <- "std_combined-ExperimentSummary.csv"
+
+
+data <- read_csv(rawdata)
+key <- read_csv(key)
+std <- read_csv(standards)
+```
+
+
+##Convert data from 'wide' to 'long' format
+The data is in the classical 'wide' format which is easy to understand from a human cognition perspective but we need to make it 'long' so it's easier to process in R.
+```{r, message=FALSE, warning=FALSE}
+data1 <- data %>%
+  gather(Sample,Count,2:37)
+
+# Separate samples by identifiers 
+data2 <- data1 %>% 
+  separate(Sample, into=c("Sample_ID","Dilution_factor","Injection","Tech_rep", sep = "_")) %>% 
+  select(-`_`)
+
+
+std1 <- std %>% 
+  gather(Sample,Count,2:13)
+
+std2 <- std1 %>% 
+  separate(Sample, into=c("Sample_ID","When","Dilution_factor","Nano_day","Injection","Tech_Rep", sep = "_")) %>% 
+  select(-`_`)
+
+
+std2$Sample_ID <- as.factor(std2$Sample_ID)
+std2$When <- as.factor(std2$When)
+std2$Dilution_factor <- as.numeric(std2$Dilution_factor)
+std2$Injection<- as.factor(std2$Injection)
+std2$Nano_day <- as.numeric(std2$Nano_day)
+
+```
+###Backcalculate standards
+Obtain the 'True_count' by multiplying the 'Count' column by the 'Dilution factor'
+```{r}
+std2 <- std2 %>% 
+  mutate(True_Count=Dilution_factor*Count)
+
+std2$Nano_day <-  factor(std2$Nano_day, levels=c('1'))
+std2$When <- factor(std2$When, levels=c('before','after'))
+```
+
+###Summarize three technical replicates
+```{r}
+std3 <- std2 %>% 
+  group_by(particle_size,Sample_ID,When,Dilution_factor,Nano_day,Injection) %>% 
+  summarise( tech_N = length(True_Count),
+             tech_mean = mean(True_Count),
+             tech_sd = sd(True_Count),
+             tech_se = tech_sd/sqrt(tech_N))
+std3
+```
+###Summarize by injection
+```{r}
+std4 <- std3 %>% 
+  group_by(Nano_day,When,particle_size) %>% 
+  summarise( inj_N = length(tech_mean),
+             inj_mean = mean(tech_mean),
+             inj_sd = sd(tech_mean),
+             inj_se = inj_sd/sqrt(inj_N))
+std4
+```
+
+
+###Plot before and after plots, facet by experimental day
+```{r, message=FALSE, warning=FALSE}
+std_day <- std4 %>% 
+  ggplot(aes(x=particle_size,y=inj_mean,color=When))+
+  geom_ribbon(aes(ymin=inj_mean-inj_se, ymax=inj_mean+inj_se),alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=2) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\n100nm standards")+ #title
+  labs(color="When")+ #Label table title
+  facet_grid(. ~ Nano_day)
+std_day
+
+```
+###Plot facet by when and experimental day
+```{r}
+std_day_facet <- std4 %>% 
+  ggplot(aes(x=particle_size,y=inj_mean,color=When))+
+  geom_ribbon(aes(ymin=inj_mean-inj_se, ymax=inj_mean+inj_se),alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=2) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\n100nm standards")+ #title
+  labs(color="Condition")+ #Label table title
+  facet_grid(When ~ Nano_day)
+std_day_facet
+
+ggsave(plot = std_day_facet, "Standards_histogram.png", 
+       height = 5, width = 7, dpi = 600, units= "in")
+
+```
+
+###Particle concentrations from each experimental day
+```{r}
+std_df <- std4 %>% 
+  group_by(Nano_day,When) %>% 
+  summarise(total=sum(inj_mean))
+std_df
+```
+###Bar graph of particle concentrations
+```{r}
+std_bar_plot <- std_df %>% 
+  ggplot(aes(x=Nano_day,y=total,fill=When))+
+  geom_col(position="dodge")+
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Experimental Day") + # X axis label
+  ylab("\nMean Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\n100nm standards")+ #title
+  labs(color="When") #Label table title
+
+std_bar_plot
+
+# ggsave(plot = std_bar_plot, "std_bar_plot.png",
+#        height = 5, width = 7, dpi = 300, units= "in")
+```
+###Intraassay variability
+```{r}
+Intra.assay_cv <- std_df %>% 
+  group_by(Nano_day) %>% 
+  summarise(Day_N = length(total),
+             Day_mean = mean(total),
+             Day_sd = sd(total),
+             Day_se = Day_sd/sqrt(Day_N),
+            Day_cv = Day_sd/Day_mean )
+Intra.assay_cv
+
+# write_csv(Intra.assay_cv, "Intra.assay_cv.csv")
+```
+
+###Inter assay variability
+```{r}
+Inter.assay <- Intra.assay_cv %>% 
+ summarise(Exp_N = length(Day_mean),
+             Exp_mean = mean(Day_mean),
+             Exp_sd = sd(Day_mean),
+             Exp_se = Exp_sd/sqrt(Exp_N),
+            Exp_cv = Exp_sd/Exp_mean )
+Inter.assay
+
+# write_csv(Inter.assay, "Inter.assay.csv")
+```
+
+##Factor the data into categorical variables
+
+```{r}
+# Refactoring Columns for samples
+data2$Sample_ID <- as.factor(data2$Sample_ID)
+data2$Dilution_factor <- as.numeric(data2$Dilution_factor)
+data2$Injection<- as.factor(data2$Injection)
+data2$Tech_rep <- as.numeric(data2$Tech_rep)
+
+
+# Refactoring COlumns for timecourse
+key$Sample_ID <- as.factor(key$Sample_ID)
+key$Profile <- as.factor(key$Profile)
+key$Sex <- as.factor(key$Sex)
+key$Age <- as.numeric(key$Age)
+```
+
+##Back calculate the original concentration of the sample
+```{r}
+data2 <- data2 %>% 
+  mutate(True_Count=Dilution_factor*Count)
+data2
+```
+
+## Average the three technical replicate readings
+```{r, message=TRUE, warning=FALSE}
+data3 <- data2 %>% 
+  group_by(particle_size,Sample_ID,Dilution_factor,Injection) %>% 
+  summarise( tech_N = length(True_Count),
+             tech_mean = mean(True_Count),
+             tech_sd = sd(True_Count),
+             tech_se = tech_sd/sqrt(tech_N))
+data3
+
+
+test1 <- left_join(key,data3, by= "Sample_ID")
+```
+
+
+##Summarize samples by injection (average both injections)
+```{r, warning=FALSE}
+
+data4 <- data3 %>% 
+  group_by(particle_size,Sample_ID,Dilution_factor) %>% 
+  summarise( inj_N = length(tech_mean),
+             inj_mean = mean(tech_mean),
+             inj_sd = sd(tech_mean),
+             inj_se = inj_sd/sqrt(inj_N))
+data4
+
+test2 <- left_join(key,data4, by= "Sample_ID")
+
+test2
+```
+
+#Quick visualizations
+
+### Graphing all samples
+```{r, warning=FALSE}
+test1$Sample_ID_correct = factor(test1$Sample_ID, levels=c('1','2','3','4','5','6'))
+test1$Profile = factor(test1$Profile, levels=c("Normal", "TgAA", "Hypothyroid"))
+
+graph1 <- test1 %>%
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=2.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nMouse Plasma Throughout Pregnancy")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct, ncol=6)
+
+graph1
+
+
+# ggsave(plot = graph1, "Nanosight_sample_histogram_plot.png",
+#        height = 10, width = 14, dpi = 400, units= "in")
+
+```
+
+####Looking at individual gestational day nanosight line plots  
+
+**Sample 1**
+```{r, message=FALSE, warning=FALSE}
+sample1_histogram <- test1 %>%
+  filter(Sample_ID == '1') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\n TgAA+ Male")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 3E9, label= "140nm")
+
+sample1_histogram
+
+
+# ggsave(plot = virgin_histogram, "virgin_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+
+```
+
+**Sample 2**  
+```{r, message=FALSE, warning=FALSE}
+sample1_histogram <- test1 %>%
+  filter(Sample_ID == '2') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nNormal Female Serum")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 3E9, label= "140nm")
+
+sample1_histogram
+
+# ggsave(plot = gd5.5_histogram, "gd5.5_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+
+
+```
+
+
+**Sample 3**  
+```{r, message=FALSE, warning=FALSE}
+sample3_histogram <- test1 %>%
+  filter(Sample_ID == '3') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nHypothyroid Male Serum")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 4E9, label= "140nm")
+
+sample3_histogram
+
+# ggsave(plot = gd10.5_histogram, "gd10.5_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+```
+
+**Sample 4**  
+```{r, message=FALSE, warning=FALSE}
+sample4_histogram <- test1 %>%
+  filter(Sample_ID == '4') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nTgAA+ Female Serum")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 3E9, label= "140nm")
+
+
+sample4_histogram
+
+# ggsave(plot = gd14.5_histogram, "gd14.5_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+
+```
+
+
+
+**Sample 5**  
+```{r, message=FALSE, warning=FALSE}
+sample5_histogram <- test1 %>%
+  filter(Sample_ID == '5') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nNormal Male Serum")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 3E9, label= "140nm")
+
+
+sample5_histogram
+
+# ggsave(plot = gd17.5_histogram, "gd17.5_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+
+
+```
+
+
+**Sample 6**  
+```{r, message=FALSE, warning=FALSE}
+sample6_histogram <- test1 %>%
+  filter(Sample_ID == '6') %>% 
+  ggplot(aes(x=particle_size, y=tech_mean,color=Injection ))+ #plot
+  geom_ribbon(aes(ymin=tech_mean-tech_se,
+                  ymax=tech_mean+tech_se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line(size=1.0) + xlim(0,500)+ #line size, x-axis scale
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nHypothyroid Male Serum")+ #title
+  labs(color="Injection")+ #Label table title
+  facet_wrap( ~ Sample_ID_correct)+
+  geom_vline(xintercept = 140)+
+  annotate("text", x= 235, y = 4E10, label= "140nm")
+
+
+sample6_histogram
+
+# ggsave(plot = one.day.post.partum_histogram, "one.day.post.partum_histogram.png",
+#        height = 10, width = 14, dpi = 300, units= "in")
+
+
+
+```
+
+### Particle concentration values for each of the 36 samples
+```{r}
+test3 <- test2 %>% 
+  group_by(Profile,Sample_ID) %>% 
+  summarise(particle_conc=sum(inj_mean))
+test3
+
+# write_csv(test3, "Sample_means.csv")
+```
+###Boxplot of all values
+```{r, warning=FALSE}
+test3$Profile <- factor(test3$Profile, levels = c("Normal","TgAA", "Hypothyroid"))
+
+plot1 <- test3 %>% 
+  group_by(Profile) %>% 
+  ggplot(aes(x= Profile, y = particle_conc/1E9, color=Profile)) +
+  geom_boxplot(colour="black",fill=NA) + 
+  geom_point(aes(text = paste("Sample ID:", Sample_ID)),
+             position='jitter',size=3)+
+  xlab("\nDisease State\n") + # X axis label
+  ylab("\n10^9 Exosomes/ml\n") + # Y axis label
+  ggtitle("Serum Exosome Concentration\nof Canine Disease States (All Samples)\n")+ #title
+  labs(color="Profile")+ # Label table title
+  scale_x_discrete( # Change X axis label
+                  labels=c("Normal","TgAA+", "Hypothyroid")) +
+  scale_color_discrete(labels=c("Normal","TgAA+", "Hypothyroid")) # Change Legend
+
+plot1
+
+# ggsave(plot = plot1, "Exosome_boxplot_plot_all.png", height = 5, width = 7, units = "in", dpi = 600)
+
+
+```
+
+##Plotly of all values
+```{r}
+  ggplotly(plot1)
+```
+
+###Box plot without sample 6
+
+```{r, warning=FALSE}
+plot1_no_sample_6 <- test3 %>% 
+  filter(!Sample_ID == '6') %>% 
+  group_by(Profile) %>% 
+  ggplot(aes(x= Profile, y = particle_conc/1E9, color=Profile)) +
+  geom_boxplot(colour="black",fill=NA) + 
+  geom_point(aes(text = paste("Sample ID:", Sample_ID)),
+             position='jitter',size=3)+
+  xlab("\nDisease State\n") + # X axis label
+  ylab("\n10^9 Exosomes/ml\n") + # Y axis label
+  ggtitle("Serum Exosome Concentration\nof Canine Disease States (Without sample 6)\n")+ #title
+  labs(color="Profile")+ # Label table title
+  scale_x_discrete( # Change X axis label
+                  labels=c("Normal","TgAA+", "Hypothyroid")) +
+  scale_color_discrete(labels=c("Normal","TgAA+", "Hypothyroid")) # Change Legend
+
+plot1_no_sample_6
+
+# ggsave(plot = plot1_no_sample_6, "Exosome_boxplot_plot_no6.png", height = 5, width = 7, units = "in", dpi = 600)
+
+```
+
+##Plotly without sample 6
+```{r}
+  ggplotly(plot1_no_sample_6)
+```
+
+
+
+
+### Summary statistics of particle concentration (averaging for each time point)
+```{r}
+test4 <- test3 %>% 
+  group_by(Profile) %>% 
+  summarise(Profile_N=length(particle_conc),
+            Profile_mean = mean(particle_conc),
+            Profile_sd = sd(particle_conc),
+            Profile_se = Profile_sd/sqrt(Profile_N))
+test4
+
+# write_csv(test4,"Summary_statistics_for_each_profile.csv")
+```
+
+
+
+
+
+
+
+###Bar plot
+```{r, warning=FALSE}
+plot <- test4 %>% 
+  ggplot(aes(x = Profile, y = Profile_mean/1E9, fill = Profile))+ #plot
+  geom_col()+
+  geom_errorbar(aes(ymin = Profile_mean/1e9-Profile_se/1e9,
+                    ymax = Profile_mean/1e9+Profile_se/1e9), width=.4,
+                size = 0.8, colour = "black", position = position_dodge(.9)) + #error bars
+  xlab("\nDisease State\n") + # X axis label
+  ylab("\nMean Concentration\n(10^9 Vesicles/ml)\n") + # Y axis label
+  ggtitle("Serum Exosome Concentration\nof Canine Disease States(All Samples)\n")+ #title
+  guides(fill=FALSE) + # Remove legend
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  scale_x_discrete( # Change X axis label
+                  labels=c("Normal","TgAA+", "Hypothyroid")) +
+  scale_color_discrete(labels=c("Normal","TgAA+", "Hypothyroid")) # Change Legend
+
+
+plot
+
+
+ggsave("Vesicle_barplot.png", height = 5, width = 7, units = "in", dpi = 600)
+```
+
+#Statistics on ALL sizes
+
+
+###Shapiro test
+```{r}
+tidy(shapiro.test(test3$particle_conc))
+
+```
+
