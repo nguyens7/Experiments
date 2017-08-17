@@ -1,0 +1,188 @@
+---
+title: "Nanosight NS300 Fluorescence Detection"
+author: "Sean Nguyen"
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+    theme: flatly
+  pdf_document: default
+---
+
+#Objective  
+Determine
+
+Detectuib threshold 8  
+
+###Nanosight acquisition settings  
+||Filter|Gain|Level|Threshold|  
+|---|---|---|---|--|
+|Standards|Yes|1|10|8|
+|Standards|No|1|15|8|
+
+##Load Libraries
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(cowplot)
+library(broom)
+library(pwr)
+library(plotly)
+library(ggsci)
+```
+
+
+##Import data
+
+  
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+setwd("~/GitHub/Experiments/Nanosight")
+
+standards <- "std_combined-ExperimentSummary.csv"
+ratio <- "ratio-ExperimentSummary.csv"
+
+
+std <- read_csv(standards)
+ratio <- read_csv(ratio)
+```
+
+
+```{r}
+std1 <- std %>% 
+  gather(Sample, Value, 2:19) %>% 
+  separate(Sample, into = c("Sample_ID","Dilution","Filter","Injection",
+                            "Tech_Rep"), sep = "_") %>% 
+  mutate(Dilution_factor = as.numeric(Dilution),
+         True_conc = Dilution_factor*Value) %>% 
+  mutate_at(vars(Sample_ID:Tech_Rep), as.factor) %>% 
+  select(particle_size:Tech_Rep, Dilution_factor, Value,True_conc,-Dilution)
+
+
+ratio1 <- ratio %>% 
+  gather(Sample, Value, 2:7) %>% 
+  separate(Sample, into = c("Sample_ID","Standard","GFP","Dilution", "Filter","Tech_Rep", sep = "_" )) %>%
+  mutate(Dilution_factor = as.numeric(Dilution),
+         True_conc = Dilution_factor*Value) %>% 
+  mutate_at(vars(Sample_ID:Tech_Rep), as.factor) %>% 
+  select(-`_`)
+  
+```
+
+```{r}
+plot <- std1 %>% 
+  ggplot(aes(x = particle_size, y = True_conc, color = Filter))+
+  geom_line(size= 1.5) + xlim(0,300)+ #line size, x-axis scale
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of \"GFP\"\nFluoSpheres 100nm standards")+ #title
+  facet_grid(Tech_Rep~Injection)
+
+plot_final <- plot + scale_color_npg()
+
+# ggsave(plot = plot_final, "plot_final.png", dpi = 600, units = 'in', width = 12, height = 8)
+
+```
+
+```{r}
+std2 <- std1 %>% 
+  group_by(particle_size, Filter, Injection) %>% 
+  summarise(n = length(True_conc),
+            mean = mean(True_conc),
+            sd = sd(True_conc),
+            se = sd/sqrt(n))
+```
+
+```{r}
+plot2 <- std2 %>%
+  ggplot(aes(x = particle_size, y = mean, color = Filter))+
+  geom_line(size= 3.0, alpha = 0.6)+ xlim(0,300)+ #line size, x-axis scale
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se),alpha=0.2, fill = alpha('grey12', 0.2)) + #error bars
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Particle Size (nm)") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of \"GFP\"\nFluoSpheres 100nm standards")+ #title
+  facet_wrap(~Injection)
+
+plot2_final <- plot2 + scale_color_npg()
+
+
+# ggsave(plot = plot2_final, "plot2_final.png", dpi = 600, units = 'in', width = 12, height = 8)
+```
+
+```{r}
+std3 <- std2 %>% 
+  group_by(Filter,Injection) %>% 
+  summarise(inj_n = length(mean),
+            inj_mean = mean(mean),
+            inj_sd = sd(mean),
+            inj_se = inj_sd/sqrt(inj_n))
+```
+
+```{r}
+bar_plot <- std3 %>% 
+  ggplot(aes(x = Injection, y = inj_mean,fill = Filter, group = Filter))+
+  geom_col(position = "dodge")+
+  geom_errorbar(aes(ymin = inj_mean-inj_se, ymax = inj_mean+inj_se), width=.4,
+                size = 0.8, colour = "black", position = position_dodge(.9)) + #error bars
+  scale_y_continuous(expand=c(0,0),
+                     limits = c(0, 2.5E10),
+                     breaks = seq(0,2.5E10,5E9))+ #set bottom of graph
+  xlab("Injection Replicates") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of \"GFP\"\nFluoSpheres 100nm standards")
+
+bar_plot <- bar_plot+scale_fill_npg()
+
+ggsave(plot = bar_plot, "bar_plot.png", dpi = 600, units = 'in', width = 12, height = 8)
+
+```
+
+```{r}
+std4 <- std3 %>% 
+  filter(!Injection == "2") %>% 
+  group_by(Filter) %>% 
+  summarise(N = length(inj_mean),
+            mean = mean(inj_mean)) 
+std4 %>% spread(Filter,mean)  %>% 
+  mutate(diff = no-yes,
+         ratio =  yes/no)
+```
+
+```{r}
+average_bar <- std4 %>% 
+  ggplot(aes(x = Filter, y = mean, fill = Filter))+
+  geom_col(width = 0.6)+
+  scale_y_continuous(expand=c(0,0))+ #set bottom of graph
+  xlab("Filter") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of \"GFP\"\nFluoSpheres 100nm standards\n")
+
+average_bar <- average_bar +scale_fill_npg()
+
+ggsave(plot = average_bar, "average_bar.png", dpi = 600, units = 'in', width = 6, height = 4)
+```
+
+
+# Ratio Calculations
+
+```{r}
+ratio1 %>% 
+  ggplot()
+```
+
+```{r}
+ratio1 %>% 
+  group_by(particle_size,Filter) %>% 
+  summarise(n = length(True_conc),
+            mean = mean(True_conc),
+            sd = sd(True_conc),
+            se = sd/sqrt(n)) %>% 
+  ggplot(aes(x = particle_size, y = mean, color = Filter))+
+  geom_line(size= 1.5, alpha = 0.6) + xlim(0,300)+ #line size, x-axis scale
+  xlab("Particle Size") + # X axis label
+  ylab("\nMean Particle Concentration\n(Particles/ml)\n") + # Y axis label
+  ggtitle("Nanosight Histogram of\nFluoSpheres 100nm standards")+ #title
+  scale_y_continuous(expand=c(0,0))
+
+```
+
