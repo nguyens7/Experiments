@@ -1,0 +1,43 @@
+---
+title: "qEV Notebook"
+author: "Sean Nguyen"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tidyverse)
+library(cowplot)
+library(broom)
+```
+
+```{r message=FALSE, warning=FALSE}
+raw_data <- read_csv("nanosight_data.csv")
+
+data <- raw_data %>% 
+  gather(samples,count,2:19) %>% 
+  separate(samples, into = c("GD", "Aliquot","Dilution", "Injection", "Tech_rep")) %>% 
+  mutate_at(vars(GD,Aliquot,Injection,Tech_rep),as.factor) %>% 
+  mutate_at(vars(Dilution),as.numeric) %>% 
+  mutate(true_count = Dilution * count)
+
+data
+
+```
+
+```{r}
+data %>%
+  ggplot(aes(x = particle_size, y = true_count, color = Tech_rep)) +
+  geom_line()+
+  facet_wrap(GD~Aliquot)
+
+```
+
+```{r}
+
+```
+

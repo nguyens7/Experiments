@@ -2,10 +2,10 @@
 title: "Nanosight NS300 Fluorescence Detection"
 author: "Sean Nguyen"
 output:
-  html_notebook: default
   html_document:
     df_print: paged
     theme: flatly
+  html_notebook: default
   pdf_document: default
 ---
 
@@ -133,7 +133,7 @@ bar_plot <- std3 %>%
 
 bar_plot <- bar_plot+scale_fill_npg()
 
-ggsave(plot = bar_plot, "bar_plot.png", dpi = 600, units = 'in', width = 12, height = 8)
+# ggsave(plot = bar_plot, "bar_plot.png", dpi = 600, units = 'in', width = 12, height = 8)
 
 ```
 
@@ -159,7 +159,7 @@ average_bar <- std4 %>%
 
 average_bar <- average_bar +scale_fill_npg()
 
-ggsave(plot = average_bar, "average_bar.png", dpi = 600, units = 'in', width = 6, height = 4)
+# ggsave(plot = average_bar, "average_bar.png", dpi = 600, units = 'in', width = 6, height = 4)
 ```
 
 
@@ -185,4 +185,3 @@ ratio1 %>%
   scale_y_continuous(expand=c(0,0))
 
 ```
-
