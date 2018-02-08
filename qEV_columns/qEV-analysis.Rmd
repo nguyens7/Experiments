@@ -16,7 +16,37 @@ library(broom)
 ```
 
 ```{r message=FALSE, warning=FALSE}
-raw_data <- read_csv("nanosight_data.csv")
+
+data_path <- "data"   # path to the data
+files <- dir(data_path, pattern = "*.csv$") # get file names
+
+
+my_data <- data_frame(filename = files) %>% # create a data frame holding the file names
+  mutate(file_contents = map(filename, 
+                             ~ read_csv(file.path(data_path, .)))) # read files into a new data column  
+```
+
+```{r}
+quick_summary <- function(df, ..., param_var) {
+param_var <- enquo(param_var)
+df %>%
+group_by_(.dots = lazyeval::lazy_dots(...)) %>%
+summarise(N = length(!!param_var),
+
+mean = mean(!!param_var, na.rm = TRUE),
+sd = sd(!!param_var, na.rm = TRUE),
+se = sd/sqrt(N))
+
+}
+```
+
+
+```{r}
+raw_data <- my_data %>%
+  filter(filename == "nanosight_data.csv") %>% 
+  unnest() %>% 
+  select(-filename)
+
 
 data <- raw_data %>% 
   gather(samples,count,2:19) %>% 
@@ -29,6 +59,7 @@ data
 
 ```
 
+
 ```{r}
 data %>%
   ggplot(aes(x = particle_size, y = true_count, color = Tech_rep)) +
@@ -37,7 +68,91 @@ data %>%
 
 ```
 
+
+# qEV of Plasma
+  Plasma from a GD 16.5 mg x WT female was collected and analyzed by **Total Exosome Isolation (TEI) reagent [Thermo Fisher]** and by **qEV size exclusion columns [IZON]**.  100ul of plasma was used as input for each method.  
+  
+###TEI
+  100ul of plasma was placed in a microfuge tube along with 50ul of PBS and 30ul of TEI reagent and subjected for centrifugation after a 10 minute incubation, the pellet was resuspended in 100ul of PBS.
+  
+###qEV 
+  100ul of plasma was placed in a qEV column and 0.5ml fractions were collected, the void volume(3ml) was discarded and the subsequent 6th, 7th and 8th column of purified vesicles were selected.
+  
+### Nanosight analysis
+  
+  |Parameter|Value|  
+  |---|---|  
+  |Gain|1|
+  |Level|12|  
+  |Threshold|4|
+  
 ```{r}
+plasma_data <- my_data %>%
+  filter(filename == "plasma_nanosight_data.csv") %>% 
+  unnest() %>% 
+  select(-filename)
+
+plasma_data
+```
+  
+```{r}
+plasma_data_clean <- plasma_data %>% 
+  gather(sample, value, 2:13) %>% 
+  separate(sample, into = c("Sample", "ID", "Dilution", "filter","Tech_rep", sep = "_")) %>% 
+  mutate_at(vars(Sample:ID,filter,Tech_rep),as.factor) %>% 
+  mutate_at(vars(Dilution),as.numeric) %>%
+  select(-(`_`)) %>% 
+  mutate(True_count = Dilution * value)
+
+plasma_data_clean
+```
+  
+```{r}
+plasma_data_clean %>% 
+  # filter(!Sample == "TEI") %>% 
+  ggplot(aes(x = particle_size, y = True_count, color = Tech_rep)) +
+  geom_line() +
+  facet_wrap(~Sample)
+  
+```
+```{r}
+plasma_data_clean %>% 
+  quick_summary(Sample, ID, particle_size, param_var = True_count) %>% 
+  ggplot(aes(x = particle_size, y = mean, color = Sample)) +
+  geom_ribbon(aes(ymin = mean-se,
+                  ymax= mean+se),
+                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_line() +
+  facet_wrap(~Sample, scales = "free_y")
+```
+  
+```{r}
+plasma_data_clean_summary <- plasma_data_clean %>% 
+  quick_summary(Sample, ID, particle_size, param_var = True_count) %>% 
+  group_by(Sample,ID) %>% 
+  summarise(Total_conc = sum(mean)) %>% 
+  mutate(Volume = case_when(
+                    str_detect(Sample, "qEV") ~ "0.500",
+                    str_detect(Sample, "TEI") ~ "0.100") %>% as.numeric(),
+         Method = case_when(
+                    str_detect(Sample,"qEV") ~ "qEV",
+                    str_detect(Sample, "TEI") ~ "TEI") %>% as.factor(),
+         Total_count = Total_conc * Volume)
+plasma_data_clean_summary
 
 ```
 
+```{r}
+plasma_data_clean_summary %>% 
+  group_by(Method) %>% 
+  summarise(Total_count_by_method = sum(Total_count)) %>% 
+  print() %>% 
+  ggplot(aes(Method, Total_count_by_method, fill = Method))+
+  geom_col() +
+  scale_y_continuous(expand = c(0,0)) +
+  labs( title = "Total number of particles by isolation technique\n",
+        x = "Method",
+        y = "Total number of particles")
+```
+  
+  
