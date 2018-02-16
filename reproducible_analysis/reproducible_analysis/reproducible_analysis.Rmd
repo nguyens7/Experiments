@@ -1,0 +1,135 @@
+---
+title: Title of submission to PLOS journal
+author:
+  - name: Sean L. Nguyen
+    email: nguyens7@msu.edu
+    affiliation: Michigan State University
+  - name: Margaret G. Petroff
+    email: petrof10@msu.edu
+    affiliation: Michigan State University
+    corresponding: petrof10@msu.edu
+address:
+  - code: Michigan State University
+    address: Program in Cell and Molecular Biology, 474 S Shaw Ln, East lansing, MI, 48824
+  - code: Michigan State University
+    address: Department of Pathobiology and Diagnostic Investigation, 784 Wilson Rd, East Lansing, MI, 48824
+abstract: |
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+  
+author_summary: |
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Nullam sapien tellus, commodo id velit id, eleifend volutpat quam. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+
+bibliography: mybibfile.bib
+output: rticles::plos_article
+csl: plos.csl
+---
+
+_Text based on plos sample manuscript, see [http://journals.plos.org/ploscompbiol/s/latex](http://journals.plos.org/ploscompbiol/s/latex)_
+
+# Introduction
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget porta erat. Morbi consectetur est vel gravida pretium. Suspendisse ut dui eu ante cursus gravida non sed sem. Phasellus mauris velit, dapibus finibus elementum vel, pulvinar non tellus. Nunc pellentesque pretium diam, quis maximus dolor faucibus id. Nunc convallis sodales ante, ut ullamcorper est egestas vitae. Nam sit amet enim ultrices, ultrices elit pulvinar, volutpat risus.
+
+A list
+
+- Item 1
+- Item 2
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tidyverse)
+
+file <- "nanosight_data.csv"
+
+
+raw_data <- read_csv(file)
+raw_data
+```
+
+```{r}
+raw_data %>% 
+  gather(ID,values,2:37)
+  
+```
+
+```{r}
+raw_data %>% 
+  gather(ID,values,2:37) %>% 
+  separate(ID, into = c("sample", "filter", "dilution_factor","tech_rep"), sep = "_")
+```
+
+```{r}
+raw_data %>% 
+  gather(ID,values,2:37) %>% 
+  separate(ID, into = c("sample", "filter", "dilution_factor","tech_rep"), sep = "_") %>% 
+  mutate_at(vars(sample,filter,tech_rep),as.factor) %>% 
+  mutate_at(vars(dilution_factor),as.numeric)
+```
+
+```{r}
+data <- raw_data %>% 
+  gather(ID,values,2:37) %>% 
+  separate(ID, into = c("sample", "filter", "dilution_factor","tech_rep"), sep = "_") %>% 
+  mutate_at(vars(sample,filter,tech_rep),as.factor) %>% 
+  mutate_at(vars(dilution_factor),as.numeric)
+data
+```
+
+```{r}
+data %>%
+  count(sample)
+```
+
+```{r}
+data %>%
+  group_by(tech_rep) %>% 
+  count(sample)
+```
+
+```{r}
+data %>%
+  group_by(tech_rep, filter) %>% 
+  count(sample)
+```
+
+```{r}
+data %>%
+  filter(sample == "fluor")
+```
+
+```{r fig.height=4, fig.width=6}
+data %>%
+  filter(sample == "fluor") %>% 
+  ggplot(aes( x = particle_size, y = values, color = filter))+
+  geom_line()
+```
+
+```{r fig.height=4, fig.width=6}
+data %>%
+  filter(sample == "fluor") %>% 
+  ggplot(aes( x = particle_size, y = values, color = filter))+
+  geom_line() +
+  facet_wrap(~tech_rep)
+```
+
+```{r fig.height=4, fig.width=6}
+data %>%
+  filter(sample == "fluor" &
+         particle_size < 300) %>% 
+  ggplot(aes( x = particle_size, y = values, color = filter))+
+  geom_line() +
+  facet_wrap(~tech_rep)
+```
+
+```{r fig.height=4, fig.width=6}
+data %>% 
+  filter(sample %in% c("100","fluor","fluorx100"),
+         particle_size < 300) %>% 
+  ggplot(aes(x = particle_size , y = values, color = filter))+
+  geom_line() +
+  facet_wrap(tech_rep~sample)
+```
+
+
+Here are two sample references: @Feynman1963118 [@Dirac1953888].
+
+# References {#references .unnumbered}
