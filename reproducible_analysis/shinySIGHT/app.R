@@ -52,48 +52,20 @@ ui <- fluidPage(
         br(),
         
         tabsetPanel(type = "tabs",
-                    tabPanel("Histogram", plotOutput("distPlot")),
                     tabPanel("Plot", plotOutput("nanoPlot")),
                     tabPanel("Plotly", plotlyOutput("plotly")),
-                    tabPanel("Data", 
+                    
         fluidRow(
-          
-          
-          column(4,
-                 selectInput("TESTfilter",
-                             "Filter:",
-                             c("All",
-                               unique(as.character(df$filter))))
-          ),
-          column(4,
-                 selectInput("TESTsample",
-                             "Sample:",
-                             c("All",
-                               unique(as.character(df$sample))))
-          )
+          DT::dataTableOutput("table"))
         
-        ),
-        # Create a new row for the table.
-        fluidRow(
-          DT::dataTableOutput("table")
-        )))
-        
+              )
       )
    )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-   
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
-      
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
-   
+
    output$nanoPlot <- renderPlot({
      # generate bins based on input$bins from ui.R
      df    <- read_csv("tidy_nano.csv") 
@@ -130,8 +102,9 @@ server <- function(input, output) {
        filter(sample == user_sample ,
               particle_size >= min_range,
               particle_size <= max_range) %>%
-       ggplot(aes( x = particle_size, y = values, color = filter))+
+       ggplot(aes( x = particle_size, y = values, color = filter)) +
        geom_line() +
+       scale_y_continuous(expand = c(0,0)) +
        facet_wrap(~tech_rep)
      
       p
@@ -142,11 +115,11 @@ server <- function(input, output) {
    output$table <- DT::renderDataTable(DT::datatable({
      data <- read_csv("tidy_nano.csv")
      
-     if (input$TESTsample != "All") {
-       data <- data[data$sample == input$TESTsample,]
+     if (input$samples != "All") {
+       data <- data[data$sample == input$samples,]
      }
-     if (input$TESTfilter != "All") {
-       data <- data[data$filter == input$TESTfilter,]
+     if (input$filter != "All") {
+       data <- data[data$filter == input$filter,]
      }
      data
    }))
