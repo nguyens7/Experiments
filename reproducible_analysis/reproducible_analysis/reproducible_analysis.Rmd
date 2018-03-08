@@ -1,5 +1,5 @@
 ---
-title: Title of submission to PLOS journal
+title: Reproducible analysis of nanoparticle tracking data
 author:
   - name: Sean L. Nguyen
     email: nguyens7@msu.edu
@@ -10,7 +10,7 @@ author:
     corresponding: petrof10@msu.edu
 address:
   - code: Michigan State University
-    address: Program in Cell and Molecular Biology, 474 S Shaw Ln, East lansing, MI, 48824
+    address: Program in Cell and Molecular Biology, 474 S Shaw Ln, East Lansing, MI, 48824
   - code: Michigan State University
     address: Department of Pathobiology and Diagnostic Investigation, 784 Wilson Rd, East Lansing, MI, 48824
 abstract: |
@@ -42,7 +42,8 @@ file <- "nanosight_data.csv"
 
 
 raw_data <- read_csv(file)
-raw_data
+raw_data %>% 
+  head()
 ```
 
 ```{r}
@@ -72,6 +73,7 @@ data <- raw_data %>%
   mutate_at(vars(sample,filter,tech_rep),as.factor) %>% 
   mutate_at(vars(dilution_factor),as.numeric)
 data
+
 ```
 
 ```{r}

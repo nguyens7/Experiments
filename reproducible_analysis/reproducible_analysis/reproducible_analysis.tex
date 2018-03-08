@@ -161,14 +161,14 @@
 % Title must be 250 characters or less.
 \begin{flushleft}
 {\Large
-\textbf\newline{Title of submission to PLOS journal} % Please use "sentence case" for title and headings (capitalize only the first word in a title (or heading), the first word in a subtitle (or subheading), and any proper nouns).
+\textbf\newline{Reproducible analysis of nanoparticle tracking data} % Please use "sentence case" for title and headings (capitalize only the first word in a title (or heading), the first word in a subtitle (or subheading), and any proper nouns).
 }
 \newline
 \\
 Sean L. Nguyen\textsuperscript{\getAff{Michigan State University}},
 Margaret G. Petroff\textsuperscript{\getAff{Michigan State University}}\textsuperscript{*}\\
 \bigskip
-\textbf{\getAff{Michigan State University}}Program in Cell and Molecular Biology, 474 S Shaw Ln, East lansing, MI,
+\textbf{\getAff{Michigan State University}}Program in Cell and Molecular Biology, 474 S Shaw Ln, East Lansing, MI,
 48824\\
 \textbf{\getAff{Michigan State University}}Department of Pathobiology and Diagnostic Investigation, 784 Wilson Rd,
 East Lansing, MI, 48824\\
@@ -233,25 +233,22 @@ A list
 
 
 \NormalTok{raw_data <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(file)}
-\NormalTok{raw_data}
+\NormalTok{raw_data }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{head}\NormalTok{()}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## # A tibble: 1,000 x 37
-##    particle_size mG15.5_yes_500_00 mG15.5_yes_500_01 mG15.5_yes_500_02
-##            <dbl>             <int>             <int>             <int>
-##  1         0.500                 0                 0                 0
-##  2         1.50                  0                 0                 0
-##  3         2.50                  0                 0                 0
-##  4         3.50                  0                 0                 0
-##  5         4.50                  0                 0                 0
-##  6         5.50                  0                 0                 0
-##  7         6.50                  0                 0                 0
-##  8         7.50                  0                 0                 0
-##  9         8.50                  0                 0                 0
-## 10         9.50                  0                 0                 0
-## # ... with 990 more rows, and 33 more variables: mG15.5_no_500_00 <int>,
+## # A tibble: 6 x 37
+##   particle_size mG15.5_yes_500_00 mG15.5_yes_500_01 mG15.5_yes_500_02
+##           <dbl>             <int>             <int>             <int>
+## 1         0.500                 0                 0                 0
+## 2         1.50                  0                 0                 0
+## 3         2.50                  0                 0                 0
+## 4         3.50                  0                 0                 0
+## 5         4.50                  0                 0                 0
+## 6         5.50                  0                 0                 0
+## # ... with 33 more variables: mG15.5_no_500_00 <int>,
 ## #   mG15.5_no_500_01 <int>, mG15.5_no_500_02 <int>, `400_yes_50_00` <int>,
 ## #   `400_yes_50_01` <int>, `400_yes_50_02` <int>, `400_no_50_00` <int>,
 ## #   `400_no_50_01` <int>, `400_no_50_02` <int>, `200_yes_125_00` <int>,

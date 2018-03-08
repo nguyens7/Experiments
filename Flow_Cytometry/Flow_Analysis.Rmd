@@ -1,0 +1,141 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(purrr)
+
+library(flowCore)
+library(flowViz)
+library(flowViz)
+library(flowStats)
+library(openCyto)
+library(data.table)
+library(ggcyto)
+library(gridExtra)
+library(here)
+```
+
+```{r}
+data <- read.flowSet(pattern="Specimen", path= "2018-02-25_SN-mTmG-titration", files=c(
+"Specimen_001_1_WT100_001.fcs",
+"Specimen_001_1_mG03_011.fcs",
+"Specimen_001_1_mG07_010.fcs",
+"Specimen_001_1_mG10-1_012.fcs",
+"Specimen_001_1_mG10-2_013.fcs",
+"Specimen_001_1_mG10-3_014.fcs",
+"Specimen_001_1_mG10-3_100000_021.fcs"))
+
+# Specimen_001_1_mG10-4_015.fcs
+# Specimen_001_1_mG10-4_100000_020.fcs
+# Specimen_001_1_mG10-5_016.fcs
+# Specimen_001_1_mG10-5_100000_019.fcs
+# Specimen_001_1_mG10-6_017.fcs
+# Specimen_001_1_mG10-6_1000000_018.fcs
+# Specimen_001_1_mG100_003.fcs
+# Specimen_001_1_mG12_006.fcs
+# Specimen_001_1_mG1_009.fcs
+# Specimen_001_1_mG25_005.fcs
+# Specimen_001_1_mG3_008.fcs
+# Specimen_001_1_mG50_004.fcs
+# Specimen_001_1_mG6_007.fcs
+# Specimen_001_1_mT100_002.fcs))
+
+
+data
+```
+
+```{r}
+
+comp_file <- here("2018-02-25_SN-mTmG-titration", "Compensation Controls_Unstained Control_022.fcs")
+
+
+comp_data <- read.FCS(comp_file)
+
+M.comp <- comp_data@description$"SPILL"
+M.comp
+
+fs.data.comp <- compensate(data, M.comp)
+
+fs.data.comp
+```
+
+```{r}
+grid.arrange(
+  xyplot(`PE-A` ~ `FITC-A`, data[[1]], smooth = FALSE, xbin=64, main="Before", xlim=c(-500, 2000), ylim=c(-5000, 75000)), 
+  xyplot(`PE-A` ~ `FITC-A`, fs.data.comp[[1]], smooth=FALSE, xbin=64, main="After", xlim=c(-500, 2000), ylim=c(-5000, 75000)), 
+  ncol=2
+)
+```
+
+```{r}
+asinhTrans <- arcsinhTransform(transformationId="In-transformation", a=1, b=1, c=1)
+translist <- transformList(colnames(M.comp), asinhTrans)
+fs.data.asinh <- transform(fs.data.comp, translist)
+
+fs.data.asinh
+```
+```{r}
+grid.arrange(
+  xyplot(`PE-A` ~ `FITC-A`, data[[1]], smooth = FALSE, xbin=64, main="Before", xlim=c(-500, 2000), ylim=c(-5000, 75000)), 
+  xyplot(`PE-A` ~ `FITC-A`, fs.data.comp[[1]], smooth=FALSE, xbin=64, main="After", xlim=c(-500, 2000), ylim=c(-5000, 75000)), 
+  xyplot(`PE-A` ~ `FITC-A`, fs.data.asinh[[1]], smooth=FALSE, xbin=64, main="asinh"), 
+  ncol=3
+)
+
+
+grid.arrange(
+  densityplot(~`PE-A`, fs.data.comp[[1]], main="comp"), 
+  densityplot(~`PE-A`, fs.data.asinh[[1]], mina="asinh"), 
+  ncol=2
+)
+
+
+
+# fs.data.asinh %>% map(~densityplot(~`PE-A`, fs.data.asinh[[.]], mina="asinh"))
+```
+
+```{r}
+gs.data <- GatingSet(fs.data.asinh)
+
+gs.data
+
+getNodes(gs.data)
+```
+
+```{r}
+getOption("openCyto")
+options("openCyto" = list(gating = list(minEvents = 10)))
+```
+
+```{r}
+# Table with your gating parameters 
+
+GateTemp.fread <- fread("gating_set.csv")
+
+GateTemp <- gatingTemplate("gating_set.csv")
+
+
+gating(GateTemp, gs.data)
+
+# Overview of gating process
+plot(gs.data)
+
+```
+
+```{r}
+rg1 <- rectangleGate("FSC-A"=c(50000, Inf), filterId="NonDebris")
+add(gs.data, rg1, parent = "root")
+
+getNodes(gs.data)
+
+recompute(gs.data)
+
+
+
+plot(gs.data)
+autoplot(gs.data)
+```
+
