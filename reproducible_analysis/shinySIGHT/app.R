@@ -11,8 +11,9 @@ library(shiny)
 library(tidyverse)
 library(cowplot)
 library(plotly)
+library(DT)
 
-
+df    <- read_csv("tidy_nano.csv")
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
@@ -43,21 +44,35 @@ ui <- fluidPage(
       mainPanel(
         helpText("This is an app that allows users to upload .csv files from nanoparticle tracking
              such as the Nanosight by Malvern."),
-        
-        
-        
+
         br(),
         
-         plotOutput("distPlot"),
+        tabsetPanel(type = "tabs",
+                    tabPanel("Histogram", plotOutput("distPlot")),
+                    tabPanel("Plot", plotOutput("nanoPlot")),
+                    tabPanel("Plotly", plotlyOutput("plotly")),
+                    tabPanel("Data", 
+        fluidRow(
+          
+          
+          column(4,
+                 selectInput("TESTfilter",
+                             "Filter:",
+                             c("All",
+                               unique(as.character(df$filter))))
+          ),
+          column(4,
+                 selectInput("TESTsample",
+                             "Sample:",
+                             c("All",
+                               unique(as.character(df$sample))))
+          )
         
-        br(),
-        
-         plotOutput("nanoPlot"),
-        
-        br(),
-        
-         plotlyOutput("plotly")
-        
+        ),
+        # Create a new row for the table.
+        fluidRow(
+          DT::dataTableOutput("table")
+        )))
         
       )
    )
@@ -77,7 +92,7 @@ server <- function(input, output) {
    
    output$nanoPlot <- renderPlot({
      # generate bins based on input$bins from ui.R
-     data    <- read_csv("tidy_nano.csv") 
+     df    <- read_csv("tidy_nano.csv") 
      
      min_range <- input$range[1]
      max_range <- input$range[2]
@@ -85,7 +100,7 @@ server <- function(input, output) {
      line_size <- input$line
      
      # draw the histogram with the specified number of bins
-    data %>%
+    df %>%
        filter(sample == user_sample ,
                 particle_size >= min_range,
               particle_size <= max_range) %>%
@@ -97,14 +112,14 @@ server <- function(input, output) {
    
    output$plotly <- renderPlotly({
 
-     data    <- read_csv("tidy_nano.csv") 
+     df    <- read_csv("tidy_nano.csv") 
      min_range <- input$range[1]
      max_range <- input$range[2]
      user_sample <-  input$samples
      line_size <- input$line
      
      # draw the histogram with the specified number of bins
-     data %>%
+     df %>%
        filter(sample == user_sample ,
               particle_size >= min_range,
               particle_size <= max_range) %>%
@@ -114,15 +129,17 @@ server <- function(input, output) {
      
    })
    
-   # Generate a summary of the data ----
-   # output$summary <- renderPrint({
-   #   summary(d())
-   # })
-   # 
-   # # Generate an HTML table view of the data ----
-   # output$table <- renderTable({
-   #   d()
-   # })
+   output$table <- DT::renderDataTable(DT::datatable({
+     data <- read_csv("tidy_nano.csv")
+     
+     if (input$TESTsample != "All") {
+       data <- data[data$sample == input$TESTsample,]
+     }
+     if (input$TESTfilter != "All") {
+       data <- data[data$filter == input$TESTfilter,]
+     }
+     data
+   }))
 }
 
 # Run the application 
