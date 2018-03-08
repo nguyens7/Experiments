@@ -35,10 +35,14 @@ ui <- fluidPage(
          textInput("group_by", "Things to group by"),
          selectInput("calculation", "Select calculation",
                      c("Summarize","Count")),
-         selectInput("samples", "Select sample of interest",
-                     c("mG15.5","400","200","100","fluorx100","fluor")),
-         selectInput("filter", "Filter",
-                                 c("Yes","No"))
+         selectInput("samples",
+                     "Sample:",
+                     c("All",
+                       unique(as.character(df$sample)))),
+         selectInput("filter",
+                     "Filter:",
+                     c("All",
+                       unique(as.character(df$filter))))
       ),
       # Show a plot of the generated distribution
       mainPanel(
@@ -113,13 +117,16 @@ server <- function(input, output) {
    output$plotly <- renderPlotly({
 
      df    <- read_csv("tidy_nano.csv") 
+     
      min_range <- input$range[1]
      max_range <- input$range[2]
      user_sample <-  input$samples
      line_size <- input$line
      
+     
+     
      # draw the histogram with the specified number of bins
-     df %>%
+     p <- df %>%
        filter(sample == user_sample ,
               particle_size >= min_range,
               particle_size <= max_range) %>%
@@ -127,6 +134,9 @@ server <- function(input, output) {
        geom_line() +
        facet_wrap(~tech_rep)
      
+      p
+
+      
    })
    
    output$table <- DT::renderDataTable(DT::datatable({
