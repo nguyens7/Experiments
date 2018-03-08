@@ -58,8 +58,8 @@ ui <- fluidPage(
         fluidRow(
           DT::dataTableOutput("table"))
         
-              )
-      )
+                )
+                   )
    )
 )
 
@@ -82,6 +82,7 @@ server <- function(input, output) {
               particle_size <= max_range) %>%
        ggplot(aes( x = particle_size, y = values, color = filter))+
        geom_line() +
+       scale_y_continuous(expand = c(0,0)) +
        facet_wrap(~tech_rep)
     
    })
@@ -95,8 +96,6 @@ server <- function(input, output) {
      user_sample <-  input$samples
      line_size <- input$line
      
-     
-     
      # draw the histogram with the specified number of bins
      p <- df %>%
        filter(sample == user_sample ,
@@ -108,7 +107,6 @@ server <- function(input, output) {
        facet_wrap(~tech_rep)
      
       p
-
       
    })
    
