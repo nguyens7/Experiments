@@ -32,12 +32,12 @@ ui <- fluidPage(
                      c("Summarize","Count")),
          selectInput("samples",
                      "Sample:",
-                     c("All",
-                       unique(as.character(df$sample)))),
+                       unique(as.character(df$sample))),
          selectInput("filter",
                      "Filter:",
                      c("All",
-                       unique(as.character(df$filter))))
+                       unique(as.character(df$filter)))),
+         submitButton("Apply Changes")
       ),
       # Show a plot of the generated distribution
       mainPanel(
@@ -62,7 +62,6 @@ ui <- fluidPage(
 server <- function(input, output) {
 
    output$nanoPlot <- renderPlot({
-     # generate bins based on input$bins from ui.R
      df    <- read_csv("tidy_nano.csv") 
      
      min_range <- input$range[1]
@@ -70,12 +69,11 @@ server <- function(input, output) {
      user_sample <-  input$samples
      line_size <- input$line
      
-     # draw the histogram with the specified number of bins
-    df %>%
+     df %>%
        filter(sample == user_sample ,
-                particle_size >= min_range,
+              particle_size >= min_range,
               particle_size <= max_range) %>%
-       ggplot(aes( x = particle_size, y = values, color = filter))+
+       ggplot(aes( x = particle_size, y = values, color = filter)) +
        geom_line() +
        scale_y_continuous(expand = c(0,0)) +
        facet_wrap(~tech_rep)
@@ -91,7 +89,6 @@ server <- function(input, output) {
      user_sample <-  input$samples
      line_size <- input$line
      
-     # draw the histogram with the specified number of bins
      p <- df %>%
        filter(sample == user_sample ,
               particle_size >= min_range,
@@ -100,7 +97,7 @@ server <- function(input, output) {
        geom_line() +
        scale_y_continuous(expand = c(0,0)) +
        facet_wrap(~tech_rep)
-     
+
       p
       
    })
@@ -123,21 +120,20 @@ server <- function(input, output) {
      
      groups <- input$group_by
      
-     summary_stat <- function(df, ..., param_var) {
-       param_var <- enquo(param_var)
-       df %>% 
-         group_by_(.dots = lazyeval::lazy_dots(...)) %>% 
-         summarise(N = length(!!param_var, na.rm = TRUE),
-                   mean = mean(!!param_var, na.rm = TRUE),
-                   sd = sd(!!param_var),
-                   se = sd/sqrt(N))
-     }
+     # summary_stat <- function(df, ..., param_var) {
+     #   param_var <- enquo(param_var)
+     #   df %>% 
+     #     group_by_(.dots = lazyeval::lazy_dots(...)) %>% 
+     #     summarise(N = length(!!param_var, na.rm = TRUE),
+     #               mean = mean(!!param_var, na.rm = TRUE),
+     #               sd = sd(!!param_var),
+     #               se = sd/sqrt(N))
+     # }
 
      data %>% 
-       group_by_(groups) %>% 
+       group_by_(.dots = groups) %>% 
        summarize(count = n())
    }))
-   
    
 }
 
