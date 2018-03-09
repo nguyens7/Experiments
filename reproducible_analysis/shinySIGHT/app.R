@@ -23,11 +23,6 @@ ui <- fluidPage(
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
       sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 1000,
-                     value = 10),
          # Input: Specification of range within an interval ----
          sliderInput("range", "Range Particle Size (nm):",
                      min = 1, max = 1000,
@@ -54,9 +49,9 @@ ui <- fluidPage(
         tabsetPanel(type = "tabs",
                     tabPanel("Plot", plotOutput("nanoPlot")),
                     tabPanel("Plotly", plotlyOutput("plotly")),
+                    tabPanel("Calculations", DT::dataTableOutput("calc_table")),
                     
-        fluidRow(
-          DT::dataTableOutput("table"))
+                    fluidRow(DT::dataTableOutput("table"))
         
                 )
                    )
@@ -121,6 +116,29 @@ server <- function(input, output) {
      }
      data
    }))
+   
+   
+   output$calc_table <- DT::renderDataTable(DT::datatable({
+     data <- read_csv("tidy_nano.csv")
+     
+     groups <- input$group_by
+     
+     summary_stat <- function(df, ..., param_var) {
+       param_var <- enquo(param_var)
+       df %>% 
+         group_by_(.dots = lazyeval::lazy_dots(...)) %>% 
+         summarise(N = length(!!param_var, na.rm = TRUE),
+                   mean = mean(!!param_var, na.rm = TRUE),
+                   sd = sd(!!param_var),
+                   se = sd/sqrt(N))
+     }
+
+     data %>% 
+       group_by_(groups) %>% 
+       summarize(count = n())
+   }))
+   
+   
 }
 
 # Run the application 
