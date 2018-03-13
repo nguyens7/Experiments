@@ -9,6 +9,7 @@
 
 library(shiny)
 library(tidyverse)
+library(shinythemes)
 library(cowplot)
 library(plotly)
 library(DT)
@@ -17,13 +18,25 @@ df    <- read_csv("tidy_nano.csv")
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
+  theme = shinytheme("flatly"),
    # Application title
    titlePanel("shinySIGHT"),
    
    # Sidebar with a slider input for number of bins 
    sidebarLayout(
+     
       sidebarPanel(
          # Input: Specification of range within an interval ----
+         # Input: Select a file ----
+         fileInput("file1", "Choose CSV File",
+                   multiple = TRUE,
+                   accept = c("text/csv",
+                              "text/comma-separated-values,text/plain",
+                              ".csv")),
+         
+         # Horizontal line ----
+         tags$hr(),
+         
          sliderInput("range", "Range Particle Size (nm):",
                      min = 1, max = 1000,
                      value = c(50,250)),
@@ -60,6 +73,32 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  output$contents <- renderTable({
+  # input$file1 will be NULL initially. After the user selects
+  # and uploads a file, head of that data file by default,
+  # or all rows if selected, will be shown.
+  
+  req(input$file1)
+  
+  df <- read.csv(input$file1$datapath,
+                 header = input$header,
+                 sep = input$sep,
+                 quote = input$quote)
+  
+  if(input$disp == "head") {
+    return(head(df))
+  }
+  else {
+    return(df)
+  }
+  
+  })
+
+
+
+
+# Plots -------------------------------------------------------------------
 
    output$nanoPlot <- renderPlot({
      df    <- read_csv("tidy_nano.csv") 
