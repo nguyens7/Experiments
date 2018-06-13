@@ -1,0 +1,55 @@
+---
+title: "tidyNano"
+output: html_notebook
+---
+
+```{r}
+library(tidyNano)
+library(tidyverse)
+```
+
+
+```{r}
+
+imported_data <- nanoimport("tidyNano-ExperimentSummary.csv")
+imported_data
+
+data <- imported_data %>% 
+  nanotidy(2:223) %>% 
+  separate(Sample, into = c("Sample", "Dilution", "Injection", "Tech_Rep"), convert = TRUE) %>% 
+  mutate_at(vars(Sample,Injection,Tech_Rep),as.factor) %>% 
+  mutate(True_Count = Dilution * Count)
+data
+  
+```
+
+```{r}
+tech_rep_mean <- data %>%
+  nanolyze(particle_size, Sample,Injection,
+           name = "Tech_rep",
+           param_var = True_Count)
+tech_rep_mean
+```
+```{r}
+tech_rep_mean %>% 
+  ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Injection)) +
+  geom_line() +
+  facet_wrap(~Sample)
+```
+```{r}
+inj_mean <- tech_rep_mean %>% 
+  nanolyze(particle_size,Sample,
+           name = "Injection",
+           param_var = Tech_rep_mean)
+
+inj_mean
+  
+```
+
+```{r}
+inj_mean %>% 
+  ggplot(aes(x = particle_size, y = Injection_mean, color = Sample)) +
+  geom_line() +
+  facet_wrap(~Sample)
+```
+

@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+author: "Sean Nguyen"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyNano)
+library(cowplot)
+library(themesoo)
+```
+
+```{r}
+my_file <- "PBS_LPS_-ExperimentSummary.csv"
+
+
+data <- nanoimport(my_file, NTA_version = 3.2)
+
+data
+```
+```{r}
+tidy_df <- data %>%
+  nanotidy(2:51, sep_var = c("Condition", "Bio_rep","Dilution", "Tech_rep"))
+
+
+tidy_df
+```
+
+```{r}
+tidy_df %>% 
+  ggplot(aes(x = particle_size, y = True_count, color = Tech_rep)) +
+  geom_line() +
+  facet_wrap(Bio_rep~Condition, ncol = 2)
+```
+```{r}
+tech_rep_df <- tidy_df %>% 
+  nanolyze(particle_size, Condition, Bio_rep,name = "Tech_rep", param_var = True_count)
+
+tech_rep_df
+
+
+
+tech_rep_df %>% 
+  ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
+  geom_line() +
+  facet_wrap(~Condition)
+```
+```{r}
+tech_rep_count_df <- tidy_df %>% 
+  nanocount(Condition, Bio_rep,Tech_rep,
+            name = "Tech_rep", param_var = True_count)
+
+tech_rep_count_df
+```
+
+```{r}
+tech_rep_count_df %>% 
+  ggplot(aes(x = Condition, y = Tech_rep_count, color = Condition)) +
+  geom_jitter(width = 0.2)  +
+  facet_wrap(~Bio_rep)
+```
+```{r}
+
+```
+
