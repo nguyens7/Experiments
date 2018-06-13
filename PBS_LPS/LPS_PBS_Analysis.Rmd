@@ -1,14 +1,22 @@
 ---
 title: "R Notebook"
 author: "Sean Nguyen"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(tidyNano)
 library(cowplot)
 library(themesoo)
+library(broom)
+library(ggpubr)
+
+# devtools::install_github("nguyens7/tidyNano")
+# devtools::install_github("soohyuna/themesoo")
+
 ```
 
 ```{r}
@@ -41,11 +49,32 @@ tech_rep_df
 
 
 
-tech_rep_df %>% 
-  ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
-  geom_line() +
-  facet_wrap(~Condition)
+
 ```
+```{r}
+line_plot <- tech_rep_df %>% 
+  ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
+  geom_line(size = 1, alpha = 0.7) +
+  facet_wrap(~Condition) +
+  theme_soo() +
+  scale_y_continuous(breaks = seq(0,7E9,1E9)) +
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+       caption = "(Lines represent biological replicates)",
+       x = "Treatment Condition\n",
+      y = "Concentration \n(particles/ml)")
+
+
+line_plot
+
+
+
+
+# ggsave(plot = line_plot, "PBS_LPS_GD16.5_Peripheral_exo_line.png",
+#        dpi = 600, width = 7, height = 4, units = "in")
+```
+
+
+
 ```{r}
 tech_rep_count_df <- tidy_df %>% 
   nanocount(Condition, Bio_rep,Tech_rep,
@@ -55,12 +84,70 @@ tech_rep_count_df
 ```
 
 ```{r}
-tech_rep_count_df %>% 
+bio_rep_count_plot <- tech_rep_count_df %>% 
   ggplot(aes(x = Condition, y = Tech_rep_count, color = Condition)) +
-  geom_jitter(width = 0.2)  +
-  facet_wrap(~Bio_rep)
+  geom_jitter(width = 0.2, alpha = 0.7, size = 2)  +
+  geom_boxplot(fill = NA, width = 0.5) +
+  facet_wrap(~Bio_rep, nrow = 1) +  
+  stat_compare_means(data = tech_rep_count_df,
+                     method = "t.test",
+                     comparisons = list(c("LPS","PBS"))) +
+  scale_y_continuous(limits = c(0,7.5E11)) +
+  guides(color = FALSE) +
+  theme_soo() +
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+       caption = "(Split by biological replicates, points represent technical replicates)",
+       x = "Treatment Condition\n",
+      y = "Concentration \n(particles/ml)") +
+  ggsci::scale_color_nejm() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+bio_rep_count_plot
+
+# ggsave(plot = bio_rep_count_plot, "PBS_LPS_GD16.5_Peripheral_exo_bio_reps.png",
+#       dpi = 600, width = 8, height = 4, units = "in")
+
 ```
 ```{r}
+bio_rep_count_df <- tech_rep_count_df %>% 
+  nanolyze(Condition,Bio_rep, name = "Bio_rep", param_var = Tech_rep_count)
 
+
+bio_rep_count_df
+```
+```{r}
+count_plot <- bio_rep_count_df %>% 
+  ggplot(aes(x = Condition, y = Bio_rep_mean, color = Condition)) +
+  geom_jitter(width = 0.1, size = 3) +
+  geom_boxplot(fill = NA, width = 0.4) +
+  stat_compare_means(data = bio_rep_count_df,
+                     method = "t.test",
+                     comparisons = list(c("LPS","PBS"))) +
+  scale_y_continuous(limits = c(0,6.5E11)) +
+  guides(color = FALSE) +
+  theme_soo() +
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+       x = "Treatment Condition",
+      y = "Concentration \n(particles/ml)") +
+  ggsci::scale_color_nejm() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+count_plot
+
+
+# ggsave(plot = count_plot, "PBS_LPS_GD16.5_Peripheral_exo.png",
+#        dpi = 600, width = 7, height = 5, units = "in")
+```
+
+
+```{r}
+shapiro.test(bio_rep_count_df$Bio_rep_mean) %>% 
+  tidy()
+```
+```{r}
+t.test(Bio_rep_mean~Condition,data = bio_rep_count_df) %>% 
+  tidy()
 ```
 

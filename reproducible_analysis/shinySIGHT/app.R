@@ -56,13 +56,21 @@ ui <- fluidPage(
       mainPanel(
         helpText("This is an app that allows users to upload .csv files from nanoparticle tracking
              such as the Nanosight by Malvern."),
-
+        
         br(),
         
         tabsetPanel(type = "tabs",
                     tabPanel("Plot", plotOutput("nanoPlot")),
+                    
+                    br(),
+                    
                     tabPanel("Plotly", plotlyOutput("plotly")),
+                    
+                    br(),
+                    
                     tabPanel("Calculations", DT::dataTableOutput("calc_table")),
+                    
+                    br(),
                     
                     fluidRow(DT::dataTableOutput("table"))
         
@@ -74,30 +82,6 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$contents <- renderTable({
-  # input$file1 will be NULL initially. After the user selects
-  # and uploads a file, head of that data file by default,
-  # or all rows if selected, will be shown.
-  
-  req(input$file1)
-  
-  df <- read.csv(input$file1$datapath,
-                 header = input$header,
-                 sep = input$sep,
-                 quote = input$quote)
-  
-  if(input$disp == "head") {
-    return(head(df))
-  }
-  else {
-    return(df)
-  }
-  
-  })
-
-
-
-
 # Plots -------------------------------------------------------------------
 
    output$nanoPlot <- renderPlot({
@@ -142,7 +126,10 @@ server <- function(input, output) {
    })
    
    output$table <- DT::renderDataTable(DT::datatable({
-     data <- read_csv("tidy_nano.csv")
+     
+     req(input$file1)
+     
+     data <- read_csv(input$file1$datapath)
      
      if (input$samples != "All") {
        data <- data[data$sample == input$samples,]
@@ -155,20 +142,12 @@ server <- function(input, output) {
    
    
    output$calc_table <- DT::renderDataTable(DT::datatable({
-     data <- read_csv("tidy_nano.csv")
+     req(input$file1)
+     
+     data <- read_csv(input$file1$datapath)
      
      groups <- input$group_by
      
-     # summary_stat <- function(df, ..., param_var) {
-     #   param_var <- enquo(param_var)
-     #   df %>% 
-     #     group_by_(.dots = lazyeval::lazy_dots(...)) %>% 
-     #     summarise(N = length(!!param_var, na.rm = TRUE),
-     #               mean = mean(!!param_var, na.rm = TRUE),
-     #               sd = sd(!!param_var),
-     #               se = sd/sqrt(N))
-     # }
-
      data %>% 
        group_by_(.dots = groups) %>% 
        summarize(count = n())
