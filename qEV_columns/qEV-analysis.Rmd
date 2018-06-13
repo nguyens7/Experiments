@@ -13,6 +13,7 @@ output:
 library(tidyverse)
 library(cowplot)
 library(broom)
+library(ggsci)
 ```
 
 ```{r message=FALSE, warning=FALSE}
@@ -64,8 +65,29 @@ data
 data %>%
   ggplot(aes(x = particle_size, y = true_count, color = Tech_rep)) +
   geom_line()+
-  facet_wrap(GD~Aliquot)
+  facet_wrap(GD~Aliquot) +
+  labs( title = "qEV Purified Explant Cultured Exosomes",
+        y = "Particle Concentration (Vesicles/ml)",
+        x = "Particle Size (nm)") +
+  scale_color_npg()
+```
+```{r}
+explant_qEV_plot <- data %>% 
+  quick_summary(particle_size, Aliquot, GD, param_var = true_count) %>% 
+  filter(particle_size < 500) %>% 
+  ggplot(aes(x = particle_size, y = mean, color = Aliquot)) +
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se),alpha=0.2,fill = alpha('grey12', 0.2))+
+  geom_line()+
+  facet_wrap(GD~Aliquot) +
+  guides(color = FALSE) +
+  labs( title = "qEV Purified Explant Cultured Exosomes",
+        y = "Particle Concentration (Vesicles/ml)",
+        x = "Particle Size (nm)") +
+  scale_color_npg()
 
+explant_qEV_plot
+
+# ggsave(plot = explant_qEV_plot, "explant_qEV_plot.png",width = 8, height = 4, dpi = 600, units = 'in')
 ```
 
 
@@ -108,22 +130,43 @@ plasma_data_clean
 ```
   
 ```{r}
-plasma_data_clean %>% 
-  # filter(!Sample == "TEI") %>% 
-  ggplot(aes(x = particle_size, y = True_count, color = Tech_rep)) +
+plasma_qEV_plot_unscaled <- plasma_data_clean %>% 
+  filter(particle_size < 500) %>% 
+  quick_summary(particle_size, Sample, ID, filter, param_var = True_count) %>% 
+  ggplot(aes(x = particle_size, y = mean, color = Sample)) +
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se),alpha=0.2,fill = alpha('grey12', 0.2))+
   geom_line() +
-  facet_wrap(~Sample)
-  
+  guides(color = FALSE) +
+  facet_wrap(~Sample) +
+    facet_wrap(~Sample, ncol = 3) +
+  labs( title = "Comparison of Plasma Exosome Isolation Methods",
+        y = "Particle Concentration (Vesicles/ml)",
+        x = "Particle Size (nm)") +
+  scale_color_npg()
+
+plasma_qEV_plot_unscaled
+
+# ggsave(plot = plasma_qEV_plot_unscaled, "plasma_qEV_plot_unscaled.png",width = 7, height = 4, dpi = 600, units = 'in')
 ```
 ```{r}
-plasma_data_clean %>% 
-  quick_summary(Sample, ID, particle_size, param_var = True_count) %>% 
+plasma_qEV_plot_scaled <- plasma_data_clean %>% 
+  filter(particle_size < 500) %>% 
+  quick_summary(particle_size, Sample, ID, filter, param_var = True_count) %>% 
   ggplot(aes(x = particle_size, y = mean, color = Sample)) +
-  geom_ribbon(aes(ymin = mean-se,
-                  ymax= mean+se),
-                  alpha=0.2,fill = alpha('grey12', 0.2)) + #error bars
+  geom_ribbon(aes(ymin=mean-se, ymax=mean+se),alpha=0.2,fill = alpha('grey12', 0.2))+
   geom_line() +
-  facet_wrap(~Sample, scales = "free_y")
+  guides(color = FALSE) +
+  facet_wrap(~Sample) +
+    facet_wrap(~Sample,scales = "free_y", ncol = 3) +
+  labs( title = "Comparison of Plasma Exosome Isolation Methods",
+        y = "Particle Concentration (Vesicles/ml)",
+        x = "Particle Size (nm)") +
+  scale_color_npg()
+
+plasma_qEV_plot_scaled
+
+# ggsave(plot = plasma_qEV_plot_scaled, "plasma_qEV_plot_scaled.png",width = 7, height = 4, dpi = 600, units = 'in')
+  
 ```
   
 ```{r}
@@ -143,16 +186,26 @@ plasma_data_clean_summary
 ```
 
 ```{r}
-plasma_data_clean_summary %>% 
+qEV_vs_TEI <- plasma_data_clean_summary %>% 
   group_by(Method) %>% 
   summarise(Total_count_by_method = sum(Total_count)) %>% 
   print() %>% 
   ggplot(aes(Method, Total_count_by_method, fill = Method))+
   geom_col() +
   scale_y_continuous(expand = c(0,0)) +
+  guides(fill = FALSE) +
   labs( title = "Total number of particles by isolation technique\n",
         x = "Method",
-        y = "Total number of particles")
+        y = "Total number of particles") +
+  scale_fill_npg()
+
+qEV_vs_TEI
+
+
+# ggsave(plot = qEV_vs_TEI, "qEV_vs_TEI.png",width = 6, height = 4, dpi = 600, units = 'in')
+
+
+
 ```
   
   
