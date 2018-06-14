@@ -19,6 +19,8 @@ library(ggpubr)
 
 ```
 
+
+
 ```{r}
 my_file <- "PBS_LPS_-ExperimentSummary.csv"
 
@@ -111,6 +113,7 @@ bio_rep_count_plot
 ```
 ```{r}
 bio_rep_count_df <- tech_rep_count_df %>% 
+  filter(!(Bio_rep == "4" & Condition == "PBS")) %>% 
   nanolyze(Condition,Bio_rep, name = "Bio_rep", param_var = Tech_rep_count)
 
 
@@ -137,7 +140,7 @@ count_plot <- bio_rep_count_df %>%
 count_plot
 
 
-# ggsave(plot = count_plot, "PBS_LPS_GD16.5_Peripheral_exo.png",
+# ggsave(plot = count_plot, "PBS_LPS_GD16.5_Peripheral_exo_no_outlier.png",
 #        dpi = 600, width = 7, height = 5, units = "in")
 ```
 
