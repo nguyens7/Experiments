@@ -1,0 +1,48 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyNano)
+```
+
+```{r}
+data <- nanocombine() %>% 
+  nanotidy(sep_var = c("Source","Dilution","Tech_rep")) %>% 
+  filter(particle_size <500)
+
+data
+```
+
+```{r}
+data %>%
+  ggplot(aes(particle_size, True_count, color = Tech_rep)) +
+  geom_line(size = 1) +
+  facet_wrap(~Source) +
+  themesoo::theme_soo()
+```
+```{r}
+data %>%
+  nanolyze(particle_size,Source,param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Source)) +
+  geom_line(size = 1) +
+  themesoo::theme_soo()
+```
+```{r}
+data %>% 
+  nanolyze(Source, particle_size, param_var = True_count) %>% 
+  nanocount(Source, param_var = Param_mean) %>% 
+  mutate( Sci_part_count = formatC(Particle_count, format = "e", digits = 2),
+    half = formatC(Particle_count/2, format = "e", digits = 2))
+```
+
+```{r}
+ formatC(1.10E12/1000*90/2/100, format = "e", digits = 2)
+
+
+ formatC(2.50E11/1000*90/100, format = "e", digits = 2)
+
+```
+
