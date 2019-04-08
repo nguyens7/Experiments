@@ -1,0 +1,122 @@
+---
+title: "PKH26 Analysis"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyNano)
+library(themesoo)
+library(scales)
+```
+
+```{r DAPI}
+
+DAPI_df <- read_csv("CountsImage.csv") %>% 
+  select(Sample = FileName_DNA,
+         DAPI_count = Count_IdentifyPrimaryObjects) %>% 
+  mutate(Sample = str_replace_all(Sample,"_DAPI.tif",""))
+  
+DAPI_df
+```
+```{r PKH26}
+PKH_df <- read_csv("PKH26_counts.csv") %>% 
+  rename(PKH_count = Count,
+         Sample = PKH) %>% 
+  mutate(Sample = str_replace_all(Sample, "_PKH26",""))
+
+PKH_df
+```
+
+```{r}
+full_df <- PKH_df %>% 
+  inner_join(DAPI_df) %>% 
+  separate(Sample, into = c("Duration","Condition","Tissue", 
+                            "Mouse","Slide","Region_no"), sep = "_") %>%
+  mutate_at(vars(Duration:Region_no),as.factor) %>% 
+  mutate(Exo_pos_percent = (PKH_count / DAPI_count) * 100)
+  
+
+full_df
+
+
+correct_df <- read_csv("full_df.csv")
+
+correct_df <- correct_df %>% 
+  mutate_at(vars(Condition:Region_no),as.factor)
+
+correct_df
+```
+```{r}
+count_plot <- correct_df %>% 
+  ggplot(aes( x = Mouse, y = Exo_pos_percent, color = Condition )) +
+  geom_point(size = 3, alpha = 0.35,
+             position = position_jitterdodge()) +
+  facet_wrap(~Tissue) + 
+  labs(title = "Percent PKH26 Positive Cells",
+       subtitle = "\nNon-pregnant Female Mice injected with
+       5ug PKH26 placental exosomes (after 30 min)\n",
+       y = "Exo + cells %",
+       caption = "Points represent individual sections\n3 slides, 5 regions each") +
+  theme_soo()
+
+# ggsave(plot = count_plot, height = 5, width = 7, units = "in", dpi = 500, "5ug_PKH26_Pexo_30min_NP_slide_counts.png")
+```
+
+```{r}
+Slides_df <- full_df %>% 
+  nanolyze(Duration, Condition, Tissue, Mouse, Slide,
+           name = "Slides", param_var = Exo_pos_percent)
+
+Slides_df
+
+
+Slides_df %>% 
+  ggplot(aes( x = Mouse, y = Slides_mean, color = Condition )) +
+  geom_point(size = 3, alpha = 0.35,
+             position = position_jitterdodge()) +
+  facet_wrap(~Tissue) +
+  theme_soo()
+
+
+Slides_df %>% 
+  ggplot(aes(x = Tissue, y = Slides_mean, color = Mouse)) +
+  geom_boxplot() +
+  geom_point(size = 3, alpha = 0.35,
+             position = position_jitterdodge()) +
+  facet_wrap(~Condition) +
+  theme_soo()
+
+```
+```{r}
+Mouse_df <- Slides_df %>% 
+  nanolyze(Duration, Condition, Tissue, Mouse,
+           name = "Mouse", param_var = Slides_mean)
+
+Mouse_df
+
+Mouse_df %>% 
+    ggplot(aes( x = Mouse, y = Mouse_mean, color = Condition )) +
+  geom_point(size = 3, alpha = 0.35,
+             position = position_jitterdodge()) +
+  facet_wrap(~Tissue) +
+  theme_soo()
+
+
+plot <- Mouse_df %>% 
+  ggplot(aes(x = Condition, y = Mouse_mean, color = Condition)) +
+  geom_point(size = 3, position = position_jitterdodge()) +
+  facet_wrap(~Tissue) +
+  labs(title = "Percent PKH26 Positive Cells",
+       subtitle = "\nNon-pregnant Female Mice injected with
+       5ug PKH26 placental exosomes (after 30 min)\n",
+       y = "Exo + cells %") +
+  guides(color = FALSE) +
+  theme_soo() 
+
+
+# ggsave(plot = plot, height = 5, width = 7, units = "in", dpi = 500, "5ug_PKH26_Pexo_30min_NP.png")
+
+
+```
+

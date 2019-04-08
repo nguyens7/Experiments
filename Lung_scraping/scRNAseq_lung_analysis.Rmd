@@ -1,0 +1,42 @@
+---
+title: "Lung Scraping"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(tidyr)
+```
+
+
+
+```{r}
+data <-  read_csv("Lung_scRNAseq_data_Joshi_2018.csv") %>% 
+  rename(Gene = X1)
+
+IM_data <- data %>% 
+  filter(str_detect(cluster,"IM"))
+
+IM_data %>% 
+  filter(str_detect(gene, "I"))
+```
+
+```{r}
+preg_lung <- read_excel("H1N1_RNAseq_Allo_Preg_Cell_host_2017.xlsx", skip = 2)
+
+preg_lung
+```
+
+```{r}
+plot <- preg_lung %>%
+  gather(-`Gene Symbol`, key = Condition, value = FC) %>%
+  ggplot(aes(`Gene Symbol`,FC)) +
+  geom_point() +
+  facet_wrap(~Condition)
+
+plot %>% 
+  plotly::ggplotly()
+  
+```
+

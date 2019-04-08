@@ -13,6 +13,7 @@ library(cowplot)
 library(themesoo)
 library(broom)
 library(ggpubr)
+library(ggbeeswarm)
 
 # devtools::install_github("nguyens7/tidyNano")
 # devtools::install_github("soohyuna/themesoo")
@@ -25,13 +26,13 @@ library(ggpubr)
 my_file <- "PBS_LPS_-ExperimentSummary.csv"
 
 
-data <- nanoimport(my_file, NTA_version = 3.2)
+data <- nanoimport(my_file)
 
 data
 ```
 ```{r}
 tidy_df <- data %>%
-  nanotidy(2:51, sep_var = c("Condition", "Bio_rep","Dilution", "Tech_rep"))
+  nanotidy(sep_var = c("Condition", "Bio_rep","Dilution", "Tech_rep"))
 
 
 tidy_df
@@ -39,10 +40,13 @@ tidy_df
 
 ```{r}
 tidy_df %>% 
-  ggplot(aes(x = particle_size, y = True_count, color = Tech_rep)) +
+  ggplot(aes(x = particle_size, 
+             y = True_count, 
+             color = Tech_rep)) +
   geom_line() +
-  facet_wrap(Bio_rep~Condition, ncol = 2)
+  facet_wrap(Bio_rep ~ Condition, ncol = 2)
 ```
+
 ```{r}
 tech_rep_df <- tidy_df %>% 
   nanolyze(particle_size, Condition, Bio_rep,name = "Tech_rep", param_var = True_count)
@@ -53,6 +57,7 @@ tech_rep_df
 
 
 ```
+
 ```{r}
 line_plot <- tech_rep_df %>% 
   ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
@@ -60,7 +65,7 @@ line_plot <- tech_rep_df %>%
   facet_wrap(~Condition) +
   theme_soo() +
   scale_y_continuous(breaks = seq(0,7E9,1E9)) +
-  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5/n",
        caption = "(Lines represent biological replicates)",
        x = "Treatment Condition\n",
       y = "Concentration \n(particles/ml)")
@@ -97,7 +102,7 @@ bio_rep_count_plot <- tech_rep_count_df %>%
   scale_y_continuous(limits = c(0,7.5E11)) +
   guides(color = FALSE) +
   theme_soo() +
-  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5/n",
        caption = "(Split by biological replicates, points represent technical replicates)",
        x = "Treatment Condition\n",
       y = "Concentration \n(particles/ml)") +
@@ -111,26 +116,27 @@ bio_rep_count_plot
 #       dpi = 600, width = 8, height = 4, units = "in")
 
 ```
+
 ```{r}
 bio_rep_count_df <- tech_rep_count_df %>% 
-  filter(!(Bio_rep == "4" & Condition == "PBS")) %>% 
   nanolyze(Condition,Bio_rep, name = "Bio_rep", param_var = Tech_rep_count)
 
 
 bio_rep_count_df
 ```
+
 ```{r}
 count_plot <- bio_rep_count_df %>% 
   ggplot(aes(x = Condition, y = Bio_rep_mean, color = Condition)) +
-  geom_jitter(width = 0.1, size = 3) +
-  geom_boxplot(fill = NA, width = 0.4) +
+  geom_quasirandom(width = 0.1, size = 4) +
+  geom_boxplot(fill = NA, width = 0.4, outlier.color = NA) +
   stat_compare_means(data = bio_rep_count_df,
                      method = "t.test",
                      comparisons = list(c("LPS","PBS"))) +
   scale_y_continuous(limits = c(0,6.5E11)) +
   guides(color = FALSE) +
   theme_soo() +
-  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5",
+  labs(title = "Peripheral Exosome Concentration of C57B/6 Mice at GD16.5\n",
        x = "Treatment Condition",
       y = "Concentration \n(particles/ml)") +
   ggsci::scale_color_nejm() +
