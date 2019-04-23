@@ -1,0 +1,45 @@
+---
+title: "4/22/2019 Exosome Analysis"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(tidyNano)
+library(themesoo)
+```
+
+```{r}
+data <- nanocombine() %>% 
+  nanotidy(sep_var = c("Status","Exo_type","Dilution","Tech_rep"))
+
+data
+```
+
+```{r}
+data %>%
+  ggplot(aes(particle_size,True_count,color = Tech_rep)) +
+  geom_line(size = 1) +
+  facet_wrap(~Status) +
+  theme_soo()
+```
+```{r}
+data %>% 
+  nanolyze(particle_size,Status,Exo_type,
+           name = "Tech_rep",
+           param_var = True_count) %>% 
+  ggplot(aes(particle_size,Tech_rep_mean, color = Status)) +
+  geom_line(size = 1) +
+  theme_soo()
+```
+```{r}
+data %>%
+  nanocount(Status, Exo_type,Tech_rep, param_var = True_count) %>%
+  ungroup() %>% 
+  nanolyze(Status,Exo_type, param_var = Particle_count) %>% 
+  mutate( Sci_part_count = formatC(Param_mean, format = "e", digits = 2),
+    half = formatC(Param_mean/2, format = "e", digits = 2))
+  
+```
+
