@@ -22,59 +22,58 @@ library(ggsci)
 
 
 
-```{r}
-my_file <- "PBS_LPS_-ExperimentSummary.csv"
+```{r message=FALSE, warning=FALSE}
+library(tidyNano)
+library(dplyr)
 
-
-data <- nanoimport(my_file)
+data <- nanoimport("PBS_LPS_-ExperimentSummary.csv")
 
 data
 ```
 
+
 ```{r}
-tidy_df <- data %>%
-  nanotidy(sep_var = c("Condition", "Bio_rep","Dilution", "Tech_rep")) %>% 
-  mutate(Condition = factor(Condition, levels = c("PBS","LPS")))
-
-
-tidy_df
+# tidy_df <- data %>%
+#   nanotidy(sep_var = c("Condition", "Bio_rep","Dilution", "Tech_rep")) %>% 
+#   mutate(Condition = factor(Condition, levels = c("PBS","LPS")))
+# 
+# tidy_df
 ```
 
 ```{r}
-tidy_df %>% 
-  filter(particle_size < 400) %>% 
-  ggplot(aes(x = particle_size, 
-             y = True_count, 
-             color = Tech_rep)) +
-  geom_line() +
-  facet_wrap(Bio_rep ~ Condition, ncol = 2)
+# tidy_df %>% 
+#   filter(particle_size < 400) %>% 
+#   ggplot(aes(x = particle_size, 
+#              y = True_count, 
+#              color = Tech_rep)) +
+#   geom_line() +
+#   facet_wrap(Bio_rep ~ Condition, ncol = 2)
 ```
 
 ```{r}
-tech_rep_df <- tidy_df %>% 
-  nanolyze(particle_size, Condition, Bio_rep,name = "Tech_rep", param_var = True_count)
-
-tech_rep_df
-
-
-
+# tech_rep_df <- tidy_df %>% 
+#   nanolyze(particle_size, Condition, Bio_rep,
+#            name = "Tech_rep",
+#            param_var = True_count)
+# 
+# tech_rep_df
 
 ```
 
 ```{r}
-line_plot <- tech_rep_df %>% 
-  ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
-  geom_line(size = 1, alpha = 0.7) +
-  facet_wrap(~Condition) +
-  theme_soo() +
-  scale_y_continuous(breaks = seq(0,7E9,1E9)) +
-  labs(title = "",
-       caption = "(Lines represent biological replicates)",
-       x = "Treatment Condition\n",
-      y = "Concentration (particles/ml)\n")
-
-line_plot
-
+# line_plot <- tech_rep_df %>% 
+#   ggplot(aes(x = particle_size, y = Tech_rep_mean, color = Bio_rep)) +
+#   geom_line(size = 1, alpha = 0.7) +
+#   facet_wrap(~Condition) +
+#   theme_soo() +
+#   theme(legend.position = c(0.93, 0.61)) +
+#   scale_color_discrete(name  = "Biol Rep") +
+#   scale_y_continuous(breaks = seq(0,7E9,1E9)) +
+#   labs(title = "",
+#        x = "Particle Size (nm)\n",
+#       y = "Concentration (particles/ml)\n")
+# 
+# line_plot
 
 
 
@@ -82,38 +81,46 @@ line_plot
 #        dpi = 600, width = 7, height = 4, units = "in")
 ```
 
+```{r}
+# tech_rep_df2 <- tech_rep_df %>% 
+#   mutate(Sample = as.factor("PTB"))
+# 
+# nanosave(tech_rep_df2)
+# shinySIGHT()
+
+```
 
 
 ```{r}
-tech_rep_count_df <- tidy_df %>% 
-  nanocount(Condition, Bio_rep,Tech_rep,
-            name = "Tech_rep", param_var = True_count)
-
-tech_rep_count_df
+# tech_rep_count_df <- tidy_df %>% 
+#   nanocount(Condition, Bio_rep,Tech_rep,
+#             name = "Tech_rep", param_var = True_count)
+# 
+# tech_rep_count_df
 ```
 
 ```{r}
-bio_rep_count_plot <- tech_rep_count_df %>% 
-  ggplot(aes(x = Condition, y = Tech_rep_count,fill = Condition, color = Condition)) +
-  geom_jitter(width = 0.2, alpha = 0.7, size = 2)  +
-  geom_boxplot(fill = NA, width = 0.5, outlier.shape = NA) +
-  facet_wrap(~Bio_rep, nrow = 1) +  
-  stat_compare_means(data = tech_rep_count_df,
-                     method = "t.test",
-                     comparisons = list(c("LPS","PBS"))) +
-  scale_y_continuous(limits = c(0,7.5E11)) +
-  guides(color = FALSE,fill = FALSE) +
-  theme_soo() +
-  labs(title = "",
-       caption = "(Split by biological replicates, points represent technical replicates)",
-       x = "Treatment Condition\n",
-      y = "Concentration (particles/ml)\n") +
-  scale_color_manual(values = c("#0072B5FF","#BC3C29FF")) +
-  scale_fill_manual(values = c("#0072B5FF","#BC3C29FF")) 
-
-
-
-bio_rep_count_plot
+# bio_rep_count_plot <- tech_rep_count_df %>% 
+#   ggplot(aes(x = Condition, y = Tech_rep_count,fill = Condition, color = Condition)) +
+#   geom_jitter(width = 0.2, alpha = 0.7, size = 2)  +
+#   geom_boxplot(fill = NA, width = 0.5, outlier.shape = NA) +
+#   facet_wrap(~Bio_rep, nrow = 1) +  
+#   stat_compare_means(data = tech_rep_count_df,
+#                      method = "t.test",
+#                      comparisons = list(c("LPS","PBS"))) +
+#   scale_y_continuous(limits = c(0,7.5E11)) +
+#   guides(color = FALSE,fill = FALSE) +
+#   theme_soo() +
+#   labs(title = "",
+#        caption = "(Split by biological replicates, points represent technical replicates)",
+#        x = "Treatment Condition\n",
+#       y = "Concentration (particles/ml)\n") +
+#   scale_color_manual(values = c("#0072B5FF","#BC3C29FF")) +
+#   scale_fill_manual(values = c("#0072B5FF","#BC3C29FF")) 
+# 
+# 
+# 
+# bio_rep_count_plot
 
 # ggsave(plot = bio_rep_count_plot, "PBS_LPS_GD16.5_Peripheral_exo_bio_reps.png",
 #       dpi = 600, width = 8, height = 4, units = "in")
@@ -121,35 +128,35 @@ bio_rep_count_plot
 ```
 
 ```{r}
-bio_rep_count_df <- tech_rep_count_df %>% 
-  nanolyze(Condition,Bio_rep, name = "Bio_rep", param_var = Tech_rep_count)
-
-
-bio_rep_count_df
+# bio_rep_count_df <- tech_rep_count_df %>% 
+#   nanolyze(Condition,Bio_rep, name = "Bio_rep", param_var = Tech_rep_count)
+# 
+# 
+# bio_rep_count_df
 ```
 
 ```{r}
-count_plot <- bio_rep_count_df %>% 
-  ggplot(aes(x = Condition, y = Bio_rep_mean, color = Condition, fill = Condition)) +
-  geom_quasirandom(width = 0.1, size = 4) +
-  geom_boxplot(alpha = 0.6, width = 0.4, outlier.color = NA) +
-  stat_compare_means(data = bio_rep_count_df,
-                     method = "t.test",
-                     comparisons = list(c("LPS","PBS"))) +
-  scale_y_continuous(limits = c(0,6.5E11)) +
-  guides(color = FALSE, fill = FALSE) +
-  theme_soo() +
-  labs(title = "",
-       x = "Treatment Condition",
-      y = "Concentration (particles/ml)\n") +
-  scale_color_manual(values = c("#0072B5FF","#BC3C29FF")) +
-  scale_fill_manual(values = c("#0072B5FF","#BC3C29FF")) 
-
-
-count_plot
-
-mypal <- pal_nejm("default")(2)
-mypal
+# count_plot <- bio_rep_count_df %>% 
+#   ggplot(aes(x = Condition, y = Bio_rep_mean, color = Condition, fill = Condition)) +
+#   geom_quasirandom(width = 0.1, size = 4) +
+#   geom_boxplot(alpha = 0.6, width = 0.4, outlier.color = NA) +
+#   stat_compare_means(data = bio_rep_count_df,
+#                      method = "t.test",
+#                      comparisons = list(c("LPS","PBS"))) +
+#   scale_y_continuous(limits = c(0,6.5E11)) +
+#   guides(color = FALSE, fill = FALSE) +
+#   theme_soo() +
+#   labs(title = "",
+#        x = "Treatment Condition",
+#       y = "Concentration (particles/ml)\n") +
+#   scale_color_manual(values = c("#0072B5FF","#BC3C29FF")) +
+#   scale_fill_manual(values = c("#0072B5FF","#BC3C29FF")) 
+# 
+# 
+# count_plot
+# 
+# mypal <- pal_nejm("default")(2)
+# mypal
 
 # ggsave(plot = count_plot, "PBS_LPS_GD16.5_Peripheral_exo.png",
 #        dpi = 600, width = 6, height = 5, units = "in")
@@ -157,21 +164,21 @@ mypal
 
 
 ```{r}
-count_plot %>% 
-  plotly::ggplotly()
+# count_plot %>% 
+#   plotly::ggplotly()
 
 ```
 
 
 ```{r}
-shapiro.test(bio_rep_count_df$Bio_rep_mean) %>% 
-  tidy()
+# shapiro.test(bio_rep_count_df$Bio_rep_mean) %>% 
+#   tidy()
 ```
 
 
 
 ```{r}
-t.test(Bio_rep_mean~Condition,data = bio_rep_count_df) %>% 
-  tidy()
+# t.test(Bio_rep_mean~Condition,data = bio_rep_count_df) %>% 
+#   tidy()
 ```
 
