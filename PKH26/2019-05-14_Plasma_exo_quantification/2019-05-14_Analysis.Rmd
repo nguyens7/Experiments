@@ -1,0 +1,39 @@
+---
+title: "Plasma Exosome Concentration"
+output: html_notebook
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidyNano)
+```
+
+
+
+```{r}
+df <- nanocombine()
+
+df
+```
+
+```{r}
+tidy_df <- df %>% 
+  nanotidy(sep_var = c("Status","Sample","Dilution", "Tech_rep"))
+  
+tidy_df
+  
+```
+```{r}
+tidy_df %>% 
+  ggplot(aes(particle_size, True_count, color = Tech_rep)) +
+  geom_line(size = 1) +
+  facet_wrap(~Status)
+```
+
+```{r}
+tidy_df %>% 
+  nanocount(Status, Sample,Tech_rep, param_var = True_count) %>% 
+  nanolyze(Status, Sample, param_var = Particle_count) %>% 
+  mutate(total = Param_mean*(50/1000)/1E10)
+```
+

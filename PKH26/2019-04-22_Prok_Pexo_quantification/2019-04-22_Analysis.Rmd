@@ -42,4 +42,3 @@ data %>%
     half = formatC(Param_mean/2, format = "e", digits = 2))
   
 ```
-
