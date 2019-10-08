@@ -1,0 +1,37 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyNano)
+
+```
+
+```{r}
+df01 <- nanocombine()
+
+df01
+```
+
+```{r}
+df01 %>% 
+  nanotidy(sep_var = c("Treatment","Gestation", "Sample", "Dilution", "Tech_rep")) %>% 
+  nanolyze(particle_size, Treatment, Sample, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Treatment)) +
+  geom_line()
+```
+```{r}
+
+df01 %>% 
+  nanotidy(sep_var = c("Treatment","Gestation", "Sample", "Dilution", "Tech_rep")) %>% 
+  nanocount(Tech_rep, Treatment, Sample, param_var = True_count) %>% 
+  ungroup() %>% 
+  nanolyze(Treatment, param_var = Particle_count)
+
+
+
+582462600200/55408323600
+
+```
