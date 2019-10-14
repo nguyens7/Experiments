@@ -1,0 +1,98 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidyNano)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+df01_raw <- nanoimport("2019-10-14_Pexo_ProK_time_titration_combined-ExperimentSummary.csv")
+df01_raw
+```
+
+```{r message=FALSE, warning=FALSE}
+df02_tidy <- df01_raw %>% 
+  nanotidy(sep_var = c("Sample", "Treatment","Dose","Time","Dilution", "Tech_rep"))
+
+df02_tidy
+
+```
+
+```{r message=FALSE, warning=FALSE}
+fig_01_time_titration_tech_rep_plot <- df02_tidy %>% 
+  filter(particle_size < 500) %>% 
+  ggplot(aes(particle_size, True_count, color = Tech_rep)) +
+  geom_line(size = 1, alpha = 0.7) +
+  facet_wrap(Treatment~Time, nrow = 1) +
+  themesoo::theme_soo() +
+  labs(title = "Pexo 0.1ug/ml Proteinase K  Time Titration\n",
+       x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n")
+
+
+fig_01_time_titration_tech_rep_plot
+
+
+
+# ggsave(plot = fig_01_time_titration_tech_rep_plot, 
+#        "fig_01_time_titration_tech_rep_plot.png", dpi = 500, units = "in",
+#        width = 12, height = 4)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+df03_avg <- df02_tidy %>% 
+  nanolyze(particle_size, Sample, Treatment, Dose, Time, Dilution, param_var = True_count)
+
+df03_avg
+```
+
+```{r message=FALSE, warning=FALSE}
+fig02_time_titration_avg_plot <- df03_avg %>% 
+  filter(particle_size < 700) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Time)) +
+  geom_line(size = 1) +
+  themesoo::theme_soo() +
+  labs(title = "Pexo 0.1ug/ml Proteinase K  Time Titration\n",
+       x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n")
+
+fig02_time_titration_avg_plot
+
+
+# ggsave(plot = fig02_time_titration_avg_plot,
+#        "fig02_time_titration_avg_plot.png", dpi = 600, units = "in",
+#        width = 6, height = 4)
+```
+
+```{r message=FALSE, warning=FALSE}
+fig_03_time_titration_count_plot <- df02_tidy %>% 
+  nanocount(Sample, Treatment, Dose, Time, Tech_rep, param_var = True_count) %>% 
+  ggplot(aes(Time, Particle_count, color = Time)) +
+  geom_boxplot(fill = NA) +
+  geom_jitter(width = 0.05, size = 3, alpha = 0.7) +
+  scale_y_continuous(limits = c(0.5E11,4.5E11)) +
+  coord_flip() +
+  themesoo::theme_soo() +
+  
+  labs(title = "Pexo 0.1ug/ml Proteinase K  Time Titration\n",
+       x = "Duration (min)",
+       y = "Concentration (particles/ml)\n")
+
+fig_03_time_titration_count_plot
+
+# ggsave(plot = fig_03_time_titration_count_plot,
+#        "fig_03_time_titration_count_plot.png", dpi = 600, units = "in",
+#        width = 6, height = 4)
+
+    
+```
+
+
