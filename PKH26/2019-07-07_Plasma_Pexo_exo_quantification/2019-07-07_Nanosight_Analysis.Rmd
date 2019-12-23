@@ -1,0 +1,140 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyNano)
+library(tidyverse)
+```
+
+
+```{r}
+
+df1_data <- nanoimport("2019-07-07_Combined_exo-ExperimentSummary.csv" ) %>% 
+  nanotidy(sep_var = c("Status","Samp_source","Dilution","Tech_rep"))
+
+df1_data
+```
+```{r}
+df1_data %>% 
+  ggplot(aes(particle_size, True_count, color = Tech_rep)) +
+  geom_line(size = 1) +
+  facet_wrap(Samp_source ~ Status) +
+  themesoo::theme_soo()
+  
+```
+```{r}
+df1_data %>% 
+  nanolyze(particle_size, Samp_source, Status, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Status)) +
+  geom_line(size = 1) +
+  facet_wrap(~Samp_source)
+```
+
+```{r}
+df2_count_df <- df1_data %>% 
+  nanocount(Tech_rep, Status, Samp_source, param_var = True_count) %>% 
+  nanolyze(Status, Samp_source, param_var = Particle_count)
+
+
+df2_count_df
+
+```
+
+```{r}
+fig01_NP_plasma <- df1_data %>% 
+  filter(Status == "NP",
+         particle_size < 251) %>% 
+  nanolyze(particle_size, Status, Samp_source, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Status)) +
+        geom_ribbon(aes(ymin = Param_mean - Param_se, 
+                        ymax = Param_mean + Param_se), alpha=0.1) +
+        geom_line(size = 1) +
+  scale_x_continuous(breaks = seq(0,250,50)) +
+  scale_y_continuous(breaks = seq(0,1.5E10,3E9)) +
+  facet_wrap(~Status) +
+  labs(x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n") +
+  scale_color_manual(values = "#50B4A1") +
+  guides(color = FALSE) +
+  themesoo::theme_soo(facet_fill = "#50B4A1",
+                      axis_title_size = 8,
+                      axis_tick_size = 8)
+  
+
+fig01_NP_plasma
+
+
+# ggsave(plot = fig01_NP_plasma, "fig01_NP_plasma_Nanosight.png",
+#        units = "in", width = 4, height = 2.5, dpi = 600)
+```
+```{r}
+fig01_NP_GD14_plasma <- df1_data %>% 
+  filter(Status %in%c("NP", "gd14"),
+         !Samp_source == "Pexo",
+         particle_size < 251) %>% 
+  mutate(Status = str_replace_all(Status, "gd14", "GD14.5"),
+         Samp_source = str_replace_all(Samp_source, "Plasmaexo", "Plasma EVs")) %>%  
+  nanolyze(particle_size, Status, Samp_source, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Status)) +
+        geom_ribbon(aes(ymin = Param_mean - Param_se, 
+                        ymax = Param_mean + Param_se), alpha=0.1) +
+        geom_line(size = 1, alpha = 0.8) +
+  scale_x_continuous(breaks = seq(0,250,50)) +
+  scale_y_continuous(breaks = seq(0,2.5E10,5E9)) +
+  facet_wrap(~Samp_source) +
+  labs(x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n",
+       color = "") +
+  scale_color_manual(values = c("#6B7CA3","#50B4A1"),
+                     limits = c("GD14.5","NP")) +
+  themesoo::theme_soo(facet_fill = "#cccccc",
+                      axis_title_size = 8,
+                      axis_tick_size = 8) +
+  theme(legend.position = c(.85,.35),
+        legend.text=element_text(size=5),
+        legend.key.size = unit(0.35, "cm"))
+  
+
+fig01_NP_GD14_plasma 
+
+
+# ggsave(plot = fig01_NP_GD14_plasma, "fig01_NP_GD14_plasma_Nanosight.png",
+#        units = "in", width = 4, height = 2.5, dpi = 600)
+
+```
+
+```{r}
+df1_data %>% 
+  filter(Status %in%c("NP", "gd14"),
+         !Samp_source == "Pexo",
+         particle_size < 251) %>% 
+  mutate(Status = str_replace_all(Status, "gd14", "GD14.5"),
+         Samp_source = str_replace_all(Samp_source, "Plasmaexo", "Plasma EVs")) %>%  
+  nanolyze(particle_size, Status, Samp_source, param_var = True_count) %>% 
+  ungroup() %>% 
+  nanocount(Status, Samp_source, param_var = Param_mean) %>% 
+  spread(Status,Particle_count) %>% 
+  mutate(FC = `GD14.5`/NP)
+```
+
+```{r}
+df1_data %>% 
+  filter(Samp_source == "Pexo",
+         particle_size < 501) %>% 
+  mutate(Status = str_replace_all(Status, "gd14", "GD14.5"),
+         Samp_source = str_replace_all(Samp_source, "Pexo", "Placental EVs")) %>%  
+  nanolyze(particle_size, Status, Samp_source, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Status)) +
+        geom_ribbon(aes(ymin = Param_mean - Param_se, 
+                        ymax = Param_mean + Param_se), alpha=0.1) +
+        geom_line(size = 1, alpha = 0.8) +
+  scale_x_continuous(breaks = seq(0,500,100)) +
+  # scale_y_continuous(breaks = seq(0,2.5E10,5E9)) +
+  facet_wrap(~Samp_source) +
+  labs(x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n",
+       color = "") 
+```
+

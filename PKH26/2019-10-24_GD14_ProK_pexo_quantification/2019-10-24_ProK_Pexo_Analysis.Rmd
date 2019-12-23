@@ -37,7 +37,30 @@ df02_tidy %>%
   nanocount(Status, Sample, Condition, Dilution, Tech_rep, param_var = True_count) %>% 
   ungroup() %>% 
   nanolyze(Status, Sample, Condition, Dilution, param_var = Particle_count) %>% 
-  mutate(Param_mean_sci = scales::scientific(Param_mean, digits = 3))
+  mutate(Param_mean_sci = scales::scientific(Param_mean, digits = 3),
+         amt_for_25e9 = (25E9/(Param_mean)))
+
+```
+
+```{r}
+tibble(Treatment = c("PBS", "ProK"),
+       Concentration = c(1.94, 0.889))
+
+```
+
+```{r}
+((1.02E9 *200) - 4.565E10) / 25E9
+
+
+9.13E9*5
+
+
+
+4.565E10/1.02E9
+
+
+
+25
 
 ```
 

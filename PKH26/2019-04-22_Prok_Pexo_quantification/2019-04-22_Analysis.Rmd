@@ -19,20 +19,27 @@ data
 
 ```{r}
 data %>%
-  ggplot(aes(particle_size,True_count,color = Tech_rep)) +
+  ggplot(aes(particle_size, True_count,
+             color = Tech_rep)) +
   geom_line(size = 1) +
   facet_wrap(~Status) +
   theme_soo()
 ```
 ```{r}
-data %>% 
+P_NP_plasma_plot <- data %>% 
   nanolyze(particle_size,Status,Exo_type,
            name = "Tech_rep",
            param_var = True_count) %>% 
   ggplot(aes(particle_size,Tech_rep_mean, color = Status)) +
   geom_line(size = 1) +
   theme_soo()
+
+P_NP_plasma_plot %>% 
+  plotly::ggplotly()
 ```
+
+
+
 ```{r}
 data %>%
   nanocount(Status, Exo_type,Tech_rep, param_var = True_count) %>%
@@ -42,3 +49,49 @@ data %>%
     half = formatC(Param_mean/2, format = "e", digits = 2))
   
 ```
+
+
+```{r}
+fig02_GD14_pEV_Nanosight_plot <- data %>% 
+  filter(Status == "GD14",
+         particle_size < 751) %>% 
+  mutate(Status = str_replace_all(Status, "GD14", "GD14.5 "),
+         Samp_source = str_replace_all(Exo_type, "Pexo", "GD14.5 Placental Explant Cultured EVs")) %>%  
+  nanolyze(particle_size, Status, Samp_source, param_var = True_count) %>% 
+  ggplot(aes(particle_size, Param_mean, color = Status)) +
+        geom_ribbon(aes(ymin = Param_mean - Param_se, 
+                        ymax = Param_mean + Param_se), alpha=0.1) +
+        geom_line(size = 1, alpha = 0.8) +
+  scale_x_continuous(breaks = seq(0,700,100)) +
+  scale_y_continuous(breaks = seq(0,1.2E10,3E9)) +
+  facet_wrap(~Samp_source) +
+  labs(x = "Particle size (nm)",
+       y = "Concentration (particles/ml)\n") +
+  scale_color_manual(values = c("#6B7CA3")) +
+  themesoo::theme_soo(facet_fill = "#cccccc",
+                      axis_title_size = 8,
+                      axis_tick_size = 8) +
+  guides(color = FALSE)
+
+
+fig02_GD14_pEV_Nanosight_plot
+
+# ggsave(plot = fig02_GD14_pEV_Nanosight_plot, "fig02_GD14_pEV_Nanosight_plot.png",
+#        units = "in", width = 4, height = 2.5, dpi = 600)
+
+
+```
+
+
+```{r}
+df <- data.frame(
+  x = 1:3,
+  pup = c("4,5,6,7,1", "3,5,6,8,9", "4,5,3,8,5"),
+  weight = c("10.3, 9.5, 8.3, 9.2, 7.5", "8.3, 6.8, ,8.4, 7.5, 8.4", "5.5, 6.4, 7.3, 8.1, 6.9"),
+  stringsAsFactors = FALSE
+)
+
+df %>% 
+separate_rows( pup, weight, convert = TRUE)
+```
+
